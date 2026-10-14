@@ -1,0 +1,37 @@
+{
+  "name": "2g2g - Marketplace de Excedentes",
+  "short_name": "2g2g",
+  "description": "Conectamos restaurantes con clientes para reducir el desperdicio de alimentos.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f1117",
+  "theme_color": "#10b981",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable any"
+    }
+  ],
+  "categories": ["food", "shopping", "lifestyle"],
+  "shortcuts": [
+    {
+      "name": "Explorar restaurantes",
+      "url": "/b2c",
+      "description": "Ver bolsas sorpresa disponibles"
+    },
+    {
+      "name": "Panel restaurante",
+      "url": "/b2b",
+      "description": "Gestionar mis paquetes"
+    }
+  ]
+}
