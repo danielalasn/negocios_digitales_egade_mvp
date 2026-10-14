@@ -101,7 +101,7 @@ export default function ConsumerProfilePage() {
             </div>
             <p className="text-xs text-muted mt-1">{currentUser.email}</p>
             <p className="text-[11px] text-muted mt-0.5">
-              Miembro de 2g2g desde {new Date(currentUser.createdAt || Date.now()).toLocaleDateString('es-MX', { month: 'long', year: 'numeric' })}
+              Miembro de Buen Bocado desde {new Date(currentUser.createdAt || Date.now()).toLocaleDateString('es-MX', { month: 'long', year: 'numeric' })}
             </p>
           </div>
         </div>

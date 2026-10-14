@@ -26,9 +26,9 @@ export function Navbar() {
           </span>
           <div className="flex flex-col">
             <span className="text-lg font-bold tracking-tight leading-none">
-              2g<span className="text-accent">2</span>g
+              Buen <span className="text-accent">Bocado</span>
             </span>
-            <span className="text-[10px] text-muted font-medium tracking-wide uppercase">Rescue Food</span>
+            <span className="text-[10px] text-muted font-medium tracking-wide uppercase">Rescata comida</span>
           </div>
         </Link>
 

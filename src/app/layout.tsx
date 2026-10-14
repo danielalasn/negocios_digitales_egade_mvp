@@ -8,7 +8,7 @@ import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
-  title: "2g2g – Rescata comida, ahorra dinero",
+  title: "Buen Bocado – Rescata comida, ahorra dinero",
   description: "Marketplace de excedentes de comida. Compra bolsas sorpresa de restaurantes locales a precios reducidos.",
   manifest: "/manifest.json",
 };

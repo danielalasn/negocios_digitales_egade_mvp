@@ -152,10 +152,6 @@ export default function HomePage() {
 
           {/* Hero Section */}
           <div className="text-center max-w-2xl mx-auto">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-accent-soft text-accent text-xs font-semibold mb-6">
-              <span className="w-2 h-2 rounded-full bg-accent animate-ping" />
-              Iniciativa contra el desperdicio de alimentos
-            </div>
 
             <h1 className="text-4xl sm:text-6xl font-black tracking-tight leading-[1.08] text-balance">
               Salva comida,<br />
@@ -194,7 +190,7 @@ export default function HomePage() {
             >
               <div>
                 <div className="w-11 h-11 rounded-xl bg-accent-soft text-accent flex items-center justify-center mb-4 group-hover:scale-105 transition-transform">
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" /><path d="M3 6h18" /><path d="M16 10a4 4 0 0 1-8 0" /></svg>
                 </div>
                 <div className="flex items-center gap-2">
                   <h2 className="text-lg font-bold text-fg">Quiero comprar bolsas</h2>
@@ -217,7 +213,7 @@ export default function HomePage() {
             >
               <div>
                 <div className="w-11 h-11 rounded-xl bg-amber-soft text-amber-fg flex items-center justify-center mb-4 group-hover:scale-105 transition-transform">
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"/><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4"/><path d="M2 7h20"/></svg>
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7" /><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" /><path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4" /><path d="M2 7h20" /></svg>
                 </div>
                 <div className="flex items-center gap-2">
                   <h2 className="text-lg font-bold text-fg">Tengo un negocio</h2>
@@ -334,7 +330,7 @@ export default function HomePage() {
           </div>
           <Err />
           <button id="b2b-submit" className="btn btn-primary w-full !py-3 font-semibold">
-            Activar mi restaurante en 2g2g →
+            Activar mi restaurante en Buen Bocado →
           </button>
         </form>
       )}
