@@ -72,8 +72,8 @@ export function Navbar() {
               Salir
             </button>
           ) : (
-            <Link href="/" className="btn btn-primary !py-1.5 !px-3.5 text-xs">
-              Entrar
+            <Link href="/?login=true" className="btn btn-primary !py-1.5 !px-3.5 text-xs font-semibold">
+              Iniciar sesión
             </Link>
           )}
         </div>

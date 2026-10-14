@@ -21,6 +21,15 @@ export default function HomePage() {
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
     setF((p) => ({ ...p, [k]: e.target.value }));
 
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const p = new URLSearchParams(window.location.search);
+      if (p.get('login') === 'true') {
+        setStep('login');
+      }
+    }
+  }, []);
+
   const go = (s: Step) => { setStep(s); setError(''); };
   const exists = (email: string) => users.some((u) => u.email.toLowerCase() === email.toLowerCase());
 
@@ -96,7 +105,16 @@ export default function HomePage() {
   };
 
   const Back = () => (
-    <button type="button" onClick={() => go('role')} className="inline-flex items-center gap-1.5 text-sm text-muted hover:text-fg mb-6 transition-colors">
+    <button
+      type="button"
+      onClick={() => {
+        go('role');
+        if (typeof window !== 'undefined' && window.location.search) {
+          router.replace('/');
+        }
+      }}
+      className="inline-flex items-center gap-1.5 text-sm text-muted hover:text-fg mb-6 transition-colors"
+    >
       <span>←</span> Volver al inicio
     </button>
   );
@@ -325,13 +343,43 @@ export default function HomePage() {
         <form onSubmit={submitLogin} className="card max-w-md mx-auto p-8 fade-in space-y-5">
           <Back />
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Bienvenido de vuelta</h1>
-            <p className="text-sm text-muted mt-1">Ingresa el correo con el que te registraste.</p>
+            <h1 className="text-2xl font-bold tracking-tight">Iniciar sesión</h1>
+            <p className="text-sm text-muted mt-1">Ingresa el correo de tu cuenta ya creada.</p>
           </div>
           <div>
             <label className="label">Correo electrónico</label>
-            <input id="login-email" type="email" placeholder="tu@correo.com" className="input" value={f.email} onChange={set('email')} />
+            <input
+              id="login-email"
+              type="email"
+              placeholder="tu@correo.com"
+              className="input"
+              value={f.email}
+              onChange={set('email')}
+              autoFocus
+              required
+            />
           </div>
+
+          <div className="p-3.5 rounded-xl bg-subtle border border-line text-xs space-y-2">
+            <span className="text-[11px] font-bold text-muted uppercase tracking-wider block">Cuentas rápidas de demostración:</span>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setF((p) => ({ ...p, email: 'sofia@demo.com' }))}
+                className="text-[11px] font-mono px-2.5 py-1 rounded-lg bg-surface border border-line hover:border-accent hover:text-accent cursor-pointer transition-colors"
+              >
+                sofia@demo.com (Cliente)
+              </button>
+              <button
+                type="button"
+                onClick={() => setF((p) => ({ ...p, email: 'marco@trattoria.com' }))}
+                className="text-[11px] font-mono px-2.5 py-1 rounded-lg bg-surface border border-line hover:border-accent hover:text-accent cursor-pointer transition-colors"
+              >
+                marco@trattoria.com (B2B)
+              </button>
+            </div>
+          </div>
+
           <Err />
           <button id="login-submit" className="btn btn-primary w-full !py-3 font-semibold">
             Iniciar sesión →
