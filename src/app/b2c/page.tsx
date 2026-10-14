@@ -11,7 +11,6 @@ type PkgWithRest = Package & { restaurant: Restaurant };
 const disc = (o: number, r: number) => Math.round(((o - r) / o) * 100);
 
 const CAT_EMOJIS: Record<string, string> = {
-  'Todas': '✨',
   'Italiana': '🍕',
   'Japonesa': '🍱',
   'Mexicana': '🌮',
@@ -111,12 +110,9 @@ export default function B2CPage() {
       {/* Welcome header & Impact widget */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="text-2xl">👋</span>
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-              ¡Hola, {currentUser.nombre.split(' ')[0]}!
-            </h1>
-          </div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+            ¡Hola, {currentUser.nombre.split(' ')[0]}!
+          </h1>
           <p className="text-sm text-muted mt-1">
             Hoy hay <strong className="text-fg">{filtered.length} bolsas sorpresa</strong> esperando ser rescatadas en tu zona.
           </p>
@@ -128,15 +124,16 @@ export default function B2CPage() {
             id="view-profile-btn"
             className="btn btn-ghost !py-2 !px-3.5 text-xs font-semibold flex items-center gap-1.5"
           >
-            <span>👤</span>
-            <span>Mi perfil & ahorros</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <span>Mi perfil</span>
           </Link>
           <button
             id="my-orders-btn"
             onClick={() => setShowOrders(true)}
-            className="btn btn-ghost !py-2 !px-4 text-xs font-semibold relative"
+            className="btn btn-ghost !py-2 !px-4 text-xs font-semibold relative flex items-center gap-1.5"
           >
-            🥡 Mis pedidos
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+            <span>Mis pedidos</span>
             {myOrders.length > 0 && (
               <span className="ml-1 px-1.5 py-0.5 rounded-full bg-accent text-accent-fg text-[10px] font-bold">
                 {myOrders.length}
@@ -149,8 +146,8 @@ export default function B2CPage() {
       {/* Eco Impact Banner */}
       <div className="mt-6 p-4 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-green-500/10 border border-emerald-500/20 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-accent text-accent-fg flex items-center justify-center text-xl shrink-0 shadow-sm">
-            🌿
+          <div className="w-10 h-10 rounded-xl bg-accent text-accent-fg flex items-center justify-center shrink-0 shadow-sm">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg>
           </div>
           <div>
             <p className="text-xs font-bold text-accent uppercase tracking-wider">Tu impacto ecológico acumulado</p>
@@ -176,7 +173,7 @@ export default function B2CPage() {
       {/* Search & Quick Filter bar */}
       <div className="mt-6 space-y-3">
         <div className="relative">
-          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted text-base">🔍</span>
+          <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
           <input
             id="search-input"
             type="text"
@@ -198,7 +195,7 @@ export default function B2CPage() {
         {/* Category Pills */}
         <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
           {categories.map((c) => {
-            const emoji = CAT_EMOJIS[c] ?? '🍽️';
+            const emoji = CAT_EMOJIS[c];
             const isActive = cat === c;
             return (
               <button
@@ -211,7 +208,7 @@ export default function B2CPage() {
                     : 'border-line bg-surface text-muted hover:text-fg hover:border-muted'
                 }`}
               >
-                <span>{emoji}</span>
+                {emoji && <span>{emoji}</span>}
                 <span>{c}</span>
               </button>
             );
@@ -226,15 +223,16 @@ export default function B2CPage() {
               onlyUnder100 ? 'bg-amber-soft text-amber-fg border-amber-400 font-semibold' : 'border-line text-muted hover:text-fg'
             }`}
           >
-            ⚡ Menos de $100
+            Menos de $100
           </button>
           <button
             onClick={() => setOnlyFavs(!onlyFavs)}
-            className={`px-3 py-1 rounded-lg border transition-colors cursor-pointer ${
+            className={`px-3 py-1 rounded-lg border transition-colors cursor-pointer flex items-center gap-1.5 ${
               onlyFavs ? 'bg-accent-soft text-accent border-accent font-semibold' : 'border-line text-muted hover:text-fg'
             }`}
           >
-            ❤️ Solo favoritos {favs.length > 0 && `(${favs.length})`}
+            <svg width="12" height="12" viewBox="0 0 24 24" fill={onlyFavs ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+            <span>Solo favoritos {favs.length > 0 && `(${favs.length})`}</span>
           </button>
         </div>
       </div>
@@ -242,7 +240,9 @@ export default function B2CPage() {
       {/* Package listings */}
       {filtered.length === 0 ? (
         <div className="card mt-8 p-14 text-center">
-          <span className="text-4xl inline-block mb-3">🔍</span>
+          <div className="w-12 h-12 rounded-2xl bg-subtle text-muted flex items-center justify-center mx-auto mb-3">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          </div>
           <p className="font-bold text-lg">No encontramos bolsas con esos filtros</p>
           <p className="text-sm text-muted mt-1">Prueba borrando tu búsqueda o cambiando de categoría.</p>
           <button
@@ -296,7 +296,7 @@ export default function B2CPage() {
                           : 'border-line text-muted hover:text-rose-500 hover:border-rose-300'
                       }`}
                     >
-                      {isFav ? '❤️' : '🤍'}
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill={isFav ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
                     </button>
                   </div>
 
@@ -314,15 +314,16 @@ export default function B2CPage() {
                   <div className="mt-4 flex flex-wrap items-center gap-1.5 text-[11px]">
                     {isLowStock ? (
                       <span className="badge badge-hot">
-                        🔥 ¡Solo quedan {p.cantidad_disponible}!
+                        Últimas {p.cantidad_disponible} disponibles
                       </span>
                     ) : (
                       <span className="badge badge-subtle">
                         Quedan {p.cantidad_disponible} bolsas
                       </span>
                     )}
-                    <span className="badge badge-subtle">
-                      ⏰ Recoge hoy {p.hora_limite}
+                    <span className="badge badge-subtle flex items-center gap-1">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                      Recoge hoy {p.hora_limite}
                     </span>
                   </div>
                 </div>
@@ -357,8 +358,9 @@ export default function B2CPage() {
       {favs.length > 0 && (
         <section className="mt-14 pt-8 border-t border-line">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-bold text-fg flex items-center gap-2">
-              <span>❤️ Tus locales favoritos</span>
+            <h2 className="text-sm font-bold text-fg flex items-center gap-1.5">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="text-rose-500" stroke="currentColor" strokeWidth="2"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+              <span>Tus locales favoritos</span>
               <span className="text-xs font-normal text-muted">({favs.length})</span>
             </h2>
           </div>
@@ -392,7 +394,6 @@ export default function B2CPage() {
       {selected && (
         <Modal onClose={() => setSelected(null)}>
           <div className="text-center pb-2">
-            <span className="text-4xl inline-block mb-2">🎁</span>
             <h3 className="text-xl font-black">{selected.titulo}</h3>
             <p className="text-sm text-muted font-medium">{selected.restaurant.nombre}</p>
           </div>
@@ -409,7 +410,7 @@ export default function B2CPage() {
           </div>
 
           <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-[11px] text-muted text-center mb-5">
-            🌱 Al reservar evitas que este lote termine en la basura y apoyas al comercio local.
+            Al reservar evitas que este lote termine en la basura y apoyas al comercio local.
           </div>
 
           <div className="flex gap-3">
@@ -427,8 +428,8 @@ export default function B2CPage() {
       {confirmed && (
         <Modal onClose={() => setConfirmed(null)}>
           <div className="text-center">
-            <div className="w-12 h-12 rounded-full bg-accent-soft text-accent flex items-center justify-center text-2xl mx-auto mb-3 animate-bounce">
-              ✓
+            <div className="w-12 h-12 rounded-full bg-accent-soft text-accent flex items-center justify-center mx-auto mb-3">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
             </div>
             <p className="text-xs uppercase font-extrabold tracking-wider text-accent">¡Bolsa Rescatada con Éxito!</p>
             <h3 className="text-lg font-black mt-1">{confirmed.pkg.restaurant.nombre}</h3>
@@ -448,7 +449,7 @@ export default function B2CPage() {
             </div>
 
             <div className="text-xs text-muted bg-surface p-3 rounded-xl border border-line text-left space-y-1">
-              <p className="font-semibold text-fg">📍 Dirección:</p>
+              <p className="font-semibold text-fg">Dirección de entrega:</p>
               <p>{confirmed.pkg.restaurant.direccion}</p>
             </div>
 
@@ -468,7 +469,7 @@ export default function B2CPage() {
         <Modal onClose={() => setShowOrders(false)}>
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-black flex items-center gap-2">
-              <span>🥡 Mis pedidos</span>
+              <span>Mis pedidos</span>
               <span className="text-xs font-normal text-muted">({myOrders.length})</span>
             </h3>
             <button onClick={() => setShowOrders(false)} className="text-xs text-muted hover:text-fg">
@@ -478,7 +479,9 @@ export default function B2CPage() {
 
           {myOrders.length === 0 ? (
             <div className="py-12 text-center text-muted">
-              <span className="text-3xl block mb-2">🛍️</span>
+              <div className="w-12 h-12 rounded-2xl bg-subtle text-muted flex items-center justify-center mx-auto mb-3">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+              </div>
               <p className="font-semibold text-sm">Aún no tienes pedidos registrados</p>
               <p className="text-xs mt-1">¡Rescata tu primera bolsa sorpresa hoy!</p>
             </div>

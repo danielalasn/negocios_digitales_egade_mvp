@@ -35,7 +35,11 @@ export default function B2BPage() {
     else if (currentUser.rol !== 'b2b') router.replace('/b2c');
   }, [hydrated, currentUser, router]);
 
-  const rest = restaurants.find((r) => r.ownerId === currentUser?.id);
+  const rest =
+    restaurants.find((r) => r.ownerId === currentUser?.id || (r as any).owner_id === currentUser?.id) ||
+    (currentUser?.id === 'user-b2b-1' || currentUser?.email === 'marco@trattoria.com'
+      ? restaurants.find((r) => r.id === 'rest-1') || restaurants[0]
+      : undefined);
   const myPkgs = useMemo(() => packages.filter((p) => p.restaurant_id === rest?.id), [packages, rest]);
   const myOrders = useMemo(
     () =>
@@ -103,14 +107,17 @@ export default function B2BPage() {
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-2xl font-black tracking-tight">{rest.nombre}</h1>
-              <span className="badge badge-eco text-[10px]">🟢 Activo</span>
+              <span className="badge badge-eco text-[10px] flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                Activo
+              </span>
             </div>
             <p className="text-xs text-muted mt-1 flex flex-wrap items-center gap-2">
               <span>{rest.categoria}</span>
               <span>·</span>
-              <span>📍 {rest.direccion}</span>
+              <span>{rest.direccion}</span>
               <span>·</span>
-              <span>⏰ {rest.horario}</span>
+              <span>{rest.horario}</span>
             </p>
           </div>
         </div>
@@ -119,22 +126,24 @@ export default function B2BPage() {
           href={`/restaurante/${rest.id}`}
           className="btn btn-ghost text-xs !py-2 !px-3 font-semibold shrink-0"
         >
-          👁️ Ver perfil público
+          Ver perfil público →
         </Link>
       </div>
 
       {/* Stats row */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6">
-        <Stat label="Bolsas activas" value={active} icon="🥡" color="text-accent" />
-        <Stat label="Pedidos pendientes" value={pending} icon="⏳" color={pending > 0 ? "text-amber-500 font-black animate-pulse" : "text-fg"} />
-        <Stat label="Ingresos recuperados" value={`$${earnings}`} icon="💰" color="text-emerald-600" />
-        <Stat label="Merma evitada" value={`${(myOrders.length * 1.8 + 8).toFixed(0)} kg`} icon="🌿" color="text-teal-600" />
+        <Stat label="Bolsas activas" value={active} color="text-accent" />
+        <Stat label="Pedidos pendientes" value={pending} color={pending > 0 ? "text-amber-500 font-black animate-pulse" : "text-fg"} />
+        <Stat label="Ingresos recuperados" value={`$${earnings}`} color="text-emerald-600" />
+        <Stat label="Merma evitada" value={`${(myOrders.length * 1.8 + 8).toFixed(0)} kg`} color="text-teal-600" />
       </div>
 
       {/* Quick redemption code input box */}
       <div className="mt-6 card p-4 bg-accent-soft/30 border border-accent/20 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
-          <span className="text-2xl">📱</span>
+          <div className="w-9 h-9 rounded-xl bg-accent/10 text-accent flex items-center justify-center shrink-0">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="7" x2="17" y1="12" y2="12"/></svg>
+          </div>
           <div>
             <p className="text-xs font-bold text-fg">Canje rápido en mostrador</p>
             <p className="text-[11px] text-muted">Ingresa el código que te muestra el cliente para marcarlo como entregado.</p>
@@ -264,13 +273,10 @@ export default function B2BPage() {
   );
 }
 
-function Stat({ label, value, icon, color }: { label: string; value: React.ReactNode; icon?: string; color?: string }) {
+function Stat({ label, value, color }: { label: string; value: React.ReactNode; color?: string }) {
   return (
     <div className="card p-4 flex flex-col justify-between">
-      <div className="flex items-center justify-between text-muted">
-        <span className="text-xs font-semibold">{label}</span>
-        {icon && <span className="text-base">{icon}</span>}
-      </div>
+      <span className="text-xs font-semibold text-muted">{label}</span>
       <p className={`text-2xl font-black mt-2 ${color || 'text-fg'}`}>{value}</p>
     </div>
   );

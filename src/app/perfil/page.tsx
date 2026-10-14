@@ -88,7 +88,7 @@ export default function ConsumerProfilePage() {
             <div className="flex items-center gap-2">
               <h1 className="text-2xl font-black tracking-tight">{currentUser.nombre}</h1>
               <span className="badge badge-eco text-[10px]">
-                {currentUser.rol === 'b2b' ? 'Partner B2B' : 'Rescatador 🌱'}
+                {currentUser.rol === 'b2b' ? 'Partner B2B' : 'Rescatador'}
               </span>
             </div>
             <p className="text-xs text-muted mt-1">{currentUser.email}</p>
@@ -108,36 +108,32 @@ export default function ConsumerProfilePage() {
 
       {/* Impact & Savings Dashboard */}
       <div className="mt-8">
-        <h2 className="text-sm font-bold text-fg uppercase tracking-wider mb-3 flex items-center gap-2">
-          <span>🌿 Tu Huella Positiva & Ahorros</span>
+        <h2 className="text-sm font-bold text-fg uppercase tracking-wider mb-3">
+          Tu impacto & ahorros acumulados
         </h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <StatCard
             label="Dinero Ahorrado"
             value={`$${moneySaved}`}
             unit="MXN"
-            icon="💰"
             color="text-accent"
           />
           <StatCard
             label="Comida Rescatada"
             value={`${kgFoodSaved}`}
             unit="kg"
-            icon="🥗"
             color="text-emerald-600"
           />
           <StatCard
             label="CO₂ Prevenido"
             value={`${co2Avoided}`}
             unit="kg"
-            icon="🌍"
             color="text-teal-600"
           />
           <StatCard
             label="Locales Apoyados"
             value={myOrders.length > 0 ? Array.from(new Set(myOrders.map(o => o.restaurant_id))).length : 2}
-            unit="restaurantes"
-            icon="🏪"
+            unit="locales"
             color="text-amber-500"
           />
         </div>
@@ -149,9 +145,7 @@ export default function ConsumerProfilePage() {
         <div className="md:col-span-2">
           <div className="card p-6 border-line space-y-4">
             <div>
-              <h3 className="text-base font-bold flex items-center gap-2">
-                <span>✏️</span> Datos Personales
-              </h3>
+              <h3 className="text-base font-bold">Datos personales</h3>
               <p className="text-xs text-muted mt-0.5">Modifica tu nombre o correo de contacto.</p>
             </div>
 
@@ -200,7 +194,7 @@ export default function ConsumerProfilePage() {
           {favRestaurants.length > 0 && (
             <div className="card p-5 border-line mt-4">
               <h4 className="text-xs font-bold text-fg uppercase tracking-wider mb-3">
-                ❤️ Tus Restaurantes Favoritos ({favRestaurants.length})
+                Tus restaurantes favoritos ({favRestaurants.length})
               </h4>
               <div className="space-y-2">
                 {favRestaurants.map((r) => r && (
@@ -226,8 +220,8 @@ export default function ConsumerProfilePage() {
         <div className="md:col-span-3">
           <div className="card p-6 border-line">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-bold flex items-center gap-2">
-                <span>🥡</span> Historial de Pedidos ({myOrders.length})
+              <h3 className="text-base font-bold">
+                Historial de pedidos ({myOrders.length})
               </h3>
               {myOrders.length > 0 && (
                 <span className="text-xs text-muted">Más recientes primero</span>
@@ -236,7 +230,9 @@ export default function ConsumerProfilePage() {
 
             {myOrders.length === 0 ? (
               <div className="py-16 text-center text-muted">
-                <span className="text-4xl block mb-3">🛍️</span>
+                <div className="w-12 h-12 rounded-2xl bg-subtle text-muted flex items-center justify-center mx-auto mb-3">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+                </div>
                 <p className="font-bold text-sm text-fg">Todavía no has hecho pedidos</p>
                 <p className="text-xs mt-1 max-w-xs mx-auto">
                   Explora las bolsas sorpresa del día y rescata comida deliciosa con hasta 70% de descuento.
@@ -256,7 +252,7 @@ export default function ConsumerProfilePage() {
                     >
                       <div className="flex items-start gap-3 min-w-0">
                         <div className="text-2xl mt-0.5 shrink-0">
-                          {o.rest?.logo || '🎁'}
+                          {o.rest?.logo || '🍽️'}
                         </div>
                         <div className="min-w-0">
                           <p className="font-bold text-sm text-fg truncate">
@@ -306,7 +302,7 @@ export default function ConsumerProfilePage() {
       {/* Toast Alert */}
       {toast && (
         <div className="fade-in fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-xl bg-fg text-bg text-xs font-bold shadow-2xl flex items-center gap-2">
-          <span>✓</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
           <span>{toast}</span>
         </div>
       )}
@@ -318,20 +314,17 @@ function StatCard({
   label,
   value,
   unit,
-  icon,
   color,
 }: {
   label: string;
   value: React.ReactNode;
   unit: string;
-  icon: string;
   color: string;
 }) {
   return (
     <div className="card p-4 flex flex-col justify-between">
-      <div className="flex items-center justify-between text-muted mb-2">
-        <span className="text-[11px] font-bold uppercase tracking-wider">{label}</span>
-        <span className="text-base">{icon}</span>
+      <div className="mb-2">
+        <span className="text-[11px] font-bold uppercase tracking-wider text-muted">{label}</span>
       </div>
       <div>
         <span className={`text-2xl font-black ${color}`}>{value}</span>

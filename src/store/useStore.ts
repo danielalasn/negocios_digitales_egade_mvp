@@ -60,9 +60,24 @@ export interface Order {
   createdAt: string;
 }
 
-// ========================
-// SEED DATA
-// ========================
+const SEED_USERS: User[] = [
+  {
+    id: 'user-b2b-1',
+    nombre: 'Chef Marco',
+    email: 'marco@trattoria.com',
+    rol: 'b2b',
+    restaurantes_favoritos: [],
+    createdAt: '2024-01-01T00:00:00Z',
+  },
+  {
+    id: 'demo-client',
+    nombre: 'Sofía Martínez',
+    email: 'sofia@demo.com',
+    rol: 'b2c',
+    restaurantes_favoritos: ['rest-1', 'rest-3'],
+    createdAt: '2024-01-01T00:00:00Z',
+  },
+];
 
 const SEED_RESTAURANTS: Restaurant[] = [
   {
@@ -336,7 +351,7 @@ export const useStore = create<AppState>()(
   persist(
     (set, get) => ({
       currentUser: null,
-      users: [],
+      users: SEED_USERS,
       restaurants: SEED_RESTAURANTS,
       packages: SEED_PACKAGES,
       orders: [],
@@ -375,7 +390,11 @@ export const useStore = create<AppState>()(
       },
 
       // ---- AUTH ----
-      login: (user) => set({ currentUser: user }),
+      login: (user) =>
+        set((s) => ({
+          currentUser: user,
+          users: s.users.some((u) => u.id === user.id) ? s.users : [...s.users, user],
+        })),
       logout: () => set({ currentUser: null }),
       updateUserProfile: (data) => {
         const { currentUser } = get();
