@@ -40,12 +40,6 @@ export default function B2CPage() {
   const [confirmed, setConfirmed] = useState<{ codigo: string; pkg: PkgWithRest } | null>(null);
   const [showOrders, setShowOrders] = useState(false);
 
-  useEffect(() => {
-    if (!hydrated) return;
-    if (!currentUser) router.replace('/');
-    else if (currentUser.rol !== 'b2c') router.replace('/b2b');
-  }, [hydrated, currentUser, router]);
-
   const available = useMemo<PkgWithRest[]>(
     () =>
       packages
@@ -88,7 +82,32 @@ export default function B2CPage() {
     [orders, packages, restaurants, currentUser]
   );
 
-  if (!hydrated || !currentUser || currentUser.rol !== 'b2c') return null;
+  if (!hydrated) return null;
+
+  if (!currentUser) {
+    return (
+      <div className="mx-auto max-w-md px-4 py-24 text-center">
+        <p className="font-bold text-lg">Inicia sesión para explorar</p>
+        <p className="text-sm text-muted mt-1.5">Descubre y rescata bolsas sorpresa cerca de ti.</p>
+        <Link href="/" className="btn btn-primary mt-6 text-xs font-bold inline-flex items-center gap-1.5">
+          Ir a iniciar sesión →
+        </Link>
+      </div>
+    );
+  }
+
+  if (currentUser.rol !== 'b2c') {
+    return (
+      <div className="mx-auto max-w-md px-4 py-24 text-center">
+        <p className="font-bold text-lg">Esta sección es para clientes</p>
+        <p className="text-sm text-muted mt-1.5">Actualmente estás con una cuenta de comercio ({currentUser.nombre}).</p>
+        <div className="mt-6 flex justify-center gap-3">
+          <Link href="/b2b" className="btn btn-primary text-xs font-bold">Ir a mi restaurante (B2B)</Link>
+          <Link href="/" className="btn btn-ghost text-xs font-semibold">Cambiar de cuenta</Link>
+        </div>
+      </div>
+    );
+  }
 
   const confirm = () => {
     if (!selected) return;

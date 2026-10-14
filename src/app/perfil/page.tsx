@@ -21,16 +21,24 @@ export default function ConsumerProfilePage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (!hydrated) return;
-    if (!currentUser) {
-      router.replace('/');
-      return;
-    }
+    if (!hydrated || !currentUser) return;
     setNombre(currentUser.nombre);
     setEmail(currentUser.email);
-  }, [hydrated, currentUser, router]);
+  }, [hydrated, currentUser]);
 
-  if (!hydrated || !currentUser) return null;
+  if (!hydrated) return null;
+
+  if (!currentUser) {
+    return (
+      <div className="mx-auto max-w-md px-4 py-24 text-center">
+        <p className="font-bold text-lg">Inicia sesión para ver tu perfil</p>
+        <p className="text-sm text-muted mt-1.5">Accede a tus pedidos y métricas de impacto.</p>
+        <Link href="/" className="btn btn-primary mt-6 text-xs font-bold inline-flex items-center gap-1.5">
+          Ir a iniciar sesión →
+        </Link>
+      </div>
+    );
+  }
 
   const myOrders = orders
     .filter((o) => o.user_id === currentUser.id)

@@ -19,20 +19,16 @@ export default function RestaurantProfilePage() {
   const createOrder = useStore((s) => s.createOrder);
   const [code, setCode] = useState<{ codigo: string; titulo: string } | null>(null);
 
-  useEffect(() => {
-    if (hydrated && !currentUser) router.replace('/');
-  }, [hydrated, currentUser, router]);
-
-  if (!hydrated || !currentUser) return null;
+  if (!hydrated) return null;
 
   const rest = restaurants.find((r) => r.id === id);
   if (!rest)
     return <div className="mx-auto max-w-md px-4 py-24 text-center text-muted">Comercio no encontrado.</div>;
 
   const items = packages.filter((p) => p.restaurant_id === rest.id);
-  const isClient = currentUser.rol === 'b2c';
-  const isFav = currentUser.restaurantes_favoritos.includes(rest.id);
-  const back = currentUser.rol === 'b2b' ? '/b2b' : '/b2c';
+  const isClient = currentUser?.rol === 'b2c';
+  const isFav = currentUser ? currentUser.restaurantes_favoritos.includes(rest.id) : false;
+  const back = currentUser ? (currentUser.rol === 'b2b' ? '/b2b' : '/b2c') : '/';
 
   return (
     <div className="mx-auto max-w-5xl pb-24">
@@ -133,7 +129,7 @@ export default function RestaurantProfilePage() {
                       <span className="badge badge-eco text-[10px] font-bold">-{disc(p.precio_original, p.precio_remate)}%</span>
                     </div>
 
-                    {isClient && (
+                    {isClient ? (
                       <button
                         id={`profile-reserve-${p.id}`}
                         disabled={out}
@@ -142,7 +138,11 @@ export default function RestaurantProfilePage() {
                       >
                         {out ? 'Agotada' : 'Rescatar bolsa'}
                       </button>
-                    )}
+                    ) : !currentUser ? (
+                      <Link href="/" className="btn btn-primary !py-2 !px-3 text-xs font-bold">
+                        Entrar para rescatar
+                      </Link>
+                    ) : null}
                   </div>
                 </article>
               );

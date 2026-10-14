@@ -29,17 +29,12 @@ export default function B2BPage() {
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setF((p) => ({ ...p, [k]: e.target.value }));
 
-  useEffect(() => {
-    if (!hydrated) return;
-    if (!currentUser) router.replace('/');
-    else if (currentUser.rol !== 'b2b') router.replace('/b2c');
-  }, [hydrated, currentUser, router]);
-
   const rest =
     restaurants.find((r) => r.ownerId === currentUser?.id || (r as any).owner_id === currentUser?.id) ||
     (currentUser?.id === 'user-b2b-1' || currentUser?.email === 'marco@trattoria.com'
       ? restaurants.find((r) => r.id === 'rest-1') || restaurants[0]
-      : undefined);
+      : (currentUser?.rol === 'b2b' ? restaurants[0] : undefined));
+
   const myPkgs = useMemo(() => packages.filter((p) => p.restaurant_id === rest?.id), [packages, rest]);
   const myOrders = useMemo(
     () =>
@@ -54,9 +49,44 @@ export default function B2BPage() {
     [orders, packages, users, rest]
   );
 
-  if (!hydrated || !currentUser || currentUser.rol !== 'b2b') return null;
-  if (!rest)
-    return <div className="mx-auto max-w-md px-4 py-24 text-center text-muted">Tu cuenta no tiene un restaurante asociado.</div>;
+  if (!hydrated) return null;
+
+  if (!currentUser) {
+    return (
+      <div className="mx-auto max-w-md px-4 py-24 text-center">
+        <p className="font-bold text-lg">Inicia sesión para entrar</p>
+        <p className="text-sm text-muted mt-1.5">Esta sección requiere una cuenta de restaurante (B2B).</p>
+        <Link href="/" className="btn btn-primary mt-6 text-xs font-bold inline-flex items-center gap-1.5">
+          Ir a iniciar sesión →
+        </Link>
+      </div>
+    );
+  }
+
+  if (currentUser.rol !== 'b2b') {
+    return (
+      <div className="mx-auto max-w-md px-4 py-24 text-center">
+        <p className="font-bold text-lg">Esta sección es para comercios</p>
+        <p className="text-sm text-muted mt-1.5">Actualmente estás con una cuenta de cliente ({currentUser.nombre}).</p>
+        <div className="mt-6 flex justify-center gap-3">
+          <Link href="/b2c" className="btn btn-primary text-xs font-bold">Ir a compras (B2C)</Link>
+          <Link href="/" className="btn btn-ghost text-xs font-semibold">Cambiar de cuenta</Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (!rest) {
+    return (
+      <div className="mx-auto max-w-md px-4 py-24 text-center">
+        <p className="font-bold text-lg">Sin restaurante asociado</p>
+        <p className="text-sm text-muted mt-1.5">Tu cuenta ({currentUser.email}) no tiene un restaurante registrado.</p>
+        <div className="mt-6 flex justify-center gap-3">
+          <Link href="/" className="btn btn-primary text-xs font-bold">Volver al inicio</Link>
+        </div>
+      </div>
+    );
+  }
 
   const pending = myOrders.filter((o) => o.estado === 'pendiente').length;
   const earnings = myOrders.filter((o) => o.estado === 'completada').reduce((a, o) => a + o.precio_pagado, 0);
