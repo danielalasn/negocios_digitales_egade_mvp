@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -8,6 +9,7 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 export function ServiceWorkerRegister() {
+  const pathname = usePathname();
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showInstallBanner, setShowInstallBanner] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
@@ -91,10 +93,15 @@ export function ServiceWorkerRegister() {
 
   if (!showInstallBanner || isInstalled) return null;
 
+  const isLanding = pathname === '/';
+  const positionClass = isLanding
+    ? 'bottom-4 left-4 right-4 sm:left-auto sm:right-6'
+    : 'bottom-22 left-4 right-4 sm:left-auto sm:right-6';
+
   return (
     <aside
       aria-label="Instalar aplicación Buen Bocado"
-      className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-6 sm:w-96 z-50 p-4 rounded-2xl bg-surface/95 backdrop-blur-md border border-accent/30 shadow-xl flex items-center justify-between gap-3 animate-slide-up"
+      className={`fixed ${positionClass} sm:w-96 z-50 p-4 rounded-2xl bg-surface/95 backdrop-blur-md border border-accent/30 shadow-xl flex items-center justify-between gap-3 animate-slide-up`}
     >
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-xl bg-accent text-white flex items-center justify-center font-bold text-lg shrink-0 shadow-sm">

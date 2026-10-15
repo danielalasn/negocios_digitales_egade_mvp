@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { useStore } from '@/store/useStore';
 import { useHydrated } from '@/components/useHydrated';
 
@@ -12,12 +13,14 @@ interface Message {
 
 export function AiChatbot() {
   const hydrated = useHydrated();
+  const pathname = usePathname();
   const currentUser = useStore((s) => s.currentUser);
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
 
-  if (!hydrated) return null;
+  // Do not render on landing page
+  if (!hydrated || pathname === '/') return null;
 
   const isB2B = currentUser?.rol === 'b2b';
 
@@ -54,7 +57,7 @@ export function AiChatbot() {
   };
 
   return (
-    <div className="fixed bottom-5 right-5 z-50 flex flex-col items-end">
+    <div className="fixed bottom-5 right-5 z-40 flex flex-col items-end">
       {/* Chat Window Panel */}
       {isOpen && (
         <div className="fade-in mb-3 w-[360px] sm:w-[400px] max-w-[calc(100vw-2rem)] h-[500px] max-h-[calc(100vh-6rem)] bg-surface border border-line rounded-3xl shadow-2xl flex flex-col overflow-hidden backdrop-blur-xl">
