@@ -19,6 +19,13 @@ export default function ConsumerProfilePage() {
   const [email, setEmail] = useState('');
   const [toast, setToast] = useState('');
   const [error, setError] = useState('');
+  const [selectedTicket, setSelectedTicket] = useState<{
+    codigo: string;
+    titulo: string;
+    restaurante: string;
+    direccion: string;
+    hora_limite: string;
+  } | null>(null);
 
   useEffect(() => {
     if (!hydrated || !currentUser) return;
@@ -108,7 +115,7 @@ export default function ConsumerProfilePage() {
 
         <div className="flex items-center gap-2 text-right self-stretch sm:self-auto justify-end">
           <div className="bg-surface border border-line px-4 py-2.5 rounded-xl text-center shadow-2xs">
-            <span className="text-[10px] text-muted font-bold uppercase tracking-wider block">Bolsas Salvadas</span>
+            <span className="text-[10px] text-muted font-bold uppercase tracking-wider block">Comidas Salvadas</span>
             <span className="text-xl font-black text-accent">{totalBags}</span>
           </div>
         </div>
@@ -243,10 +250,10 @@ export default function ConsumerProfilePage() {
                 </div>
                 <p className="font-bold text-sm text-fg">Todavía no has hecho pedidos</p>
                 <p className="text-xs mt-1 max-w-xs mx-auto">
-                  Explora las bolsas sorpresa del día y rescata comida deliciosa con hasta 70% de descuento.
+                  Explora los paquetes del día y rescata comida deliciosa con hasta 70% de descuento.
                 </p>
                 <Link href="/b2c" className="btn btn-primary mt-5 text-xs font-bold">
-                  Ver bolsas disponibles hoy
+                  Ver paquetes disponibles hoy
                 </Link>
               </div>
             ) : (
@@ -264,7 +271,7 @@ export default function ConsumerProfilePage() {
                         </div>
                         <div className="min-w-0">
                           <p className="font-bold text-sm text-fg truncate">
-                            {o.pkg?.titulo || 'Bolsa Sorpresa'}
+                            {o.pkg?.titulo || 'Paquete de Comida'}
                           </p>
                           <Link
                             href={`/restaurante/${o.restaurant_id}`}
@@ -294,9 +301,26 @@ export default function ConsumerProfilePage() {
                         </div>
                       </div>
 
-                      <div className="text-left sm:text-right shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-line">
-                        <span className="text-lg font-black text-fg">${o.precio_pagado}</span>
-                        <span className="text-xs text-muted block">MXN pagados</span>
+                      <div className="flex items-center gap-2.5 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-line">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedTicket({
+                            codigo: o.codigo_recoleccion,
+                            titulo: o.pkg?.titulo || 'Paquete de comida',
+                            restaurante: o.rest?.nombre || 'Comercio local',
+                            direccion: o.rest?.direccion || 'Mostrador del comercio',
+                            hora_limite: o.pkg?.hora_limite || '22:00',
+                          })}
+                          className="btn btn-secondary !py-1.5 !px-3 text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-2xs hover:border-accent/40"
+                          title="Ver código QR para recoger"
+                        >
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M7 7h.01M17 7h.01M7 17h.01M17 17h.01"/></svg>
+                          <span>Ver QR</span>
+                        </button>
+                        <div className="text-right">
+                          <span className="text-lg font-black text-fg">${o.precio_pagado}</span>
+                          <span className="text-xs text-muted block">MXN pagados</span>
+                        </div>
                       </div>
                     </div>
                   );
@@ -307,6 +331,45 @@ export default function ConsumerProfilePage() {
         </div>
       </div>
 
+      {/* QR Ticket Modal */}
+      {selectedTicket && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/60 backdrop-blur-xs" onClick={() => setSelectedTicket(null)}>
+          <div className="card fade-in w-full max-w-sm p-6 shadow-2xl border-line text-center" onClick={(e) => e.stopPropagation()}>
+            <div className="w-12 h-12 rounded-full bg-accent-soft text-accent flex items-center justify-center mx-auto mb-2">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <p className="text-xs uppercase font-extrabold tracking-wider text-accent">Código de Recolección</p>
+            <h3 className="text-lg font-black mt-1">{selectedTicket.restaurante}</h3>
+            <p className="text-xs text-muted mt-0.5">{selectedTicket.titulo}</p>
+
+            <div className="my-4 p-4 rounded-2xl bg-subtle border border-dashed border-accent/40 text-center">
+              <QrCodeVisual value={selectedTicket.codigo} />
+              <p className="text-[11px] font-bold text-muted uppercase tracking-wider mt-2 mb-0.5">
+                Código para canje en mostrador
+              </p>
+              <p className="text-3xl font-black font-mono tracking-widest text-accent py-1 select-all">
+                {selectedTicket.codigo}
+              </p>
+              <p className="text-[11px] text-muted">
+                Horario límite de recolección: <strong>{selectedTicket.hora_limite}</strong>
+              </p>
+            </div>
+
+            <div className="text-xs text-muted bg-surface p-3 rounded-xl border border-line text-left space-y-1 mb-5">
+              <p className="font-semibold text-fg">Dirección de entrega:</p>
+              <p>{selectedTicket.direccion}</p>
+            </div>
+
+            <button
+              onClick={() => setSelectedTicket(null)}
+              className="btn btn-primary w-full text-xs font-bold"
+            >
+              Cerrar ticket
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Toast Alert */}
       {toast && (
         <div className="fade-in fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-xl bg-fg text-bg text-xs font-bold shadow-2xl flex items-center gap-2">
@@ -314,6 +377,37 @@ export default function ConsumerProfilePage() {
           <span>{toast}</span>
         </div>
       )}
+    </div>
+  );
+}
+
+function QrCodeVisual({ value }: { value: string }) {
+  return (
+    <div className="w-32 h-32 mx-auto my-3 p-2 bg-white rounded-xl shadow-xs border border-line flex items-center justify-center">
+      <svg viewBox="0 0 100 100" className="w-full h-full text-zinc-900" fill="currentColor">
+        <rect x="8" y="8" width="26" height="26" fill="none" stroke="currentColor" strokeWidth="4" rx="2" />
+        <rect x="15" y="15" width="12" height="12" rx="1" />
+        <rect x="66" y="8" width="26" height="26" fill="none" stroke="currentColor" strokeWidth="4" rx="2" />
+        <rect x="73" y="15" width="12" height="12" rx="1" />
+        <rect x="8" y="66" width="26" height="26" fill="none" stroke="currentColor" strokeWidth="4" rx="2" />
+        <rect x="15" y="73" width="12" height="12" rx="1" />
+        <rect x="42" y="10" width="6" height="6" />
+        <rect x="52" y="10" width="6" height="6" />
+        <rect x="42" y="22" width="6" height="6" />
+        <rect x="52" y="22" width="6" height="6" />
+        <rect x="10" y="42" width="6" height="6" />
+        <rect x="22" y="42" width="6" height="6" />
+        <rect x="40" y="40" width="8" height="8" />
+        <rect x="56" y="42" width="6" height="6" />
+        <rect x="72" y="42" width="6" height="6" />
+        <rect x="84" y="42" width="6" height="6" />
+        <rect x="42" y="56" width="6" height="6" />
+        <rect x="54" y="56" width="6" height="6" />
+        <rect x="42" y="72" width="6" height="6" />
+        <rect x="54" y="72" width="8" height="8" />
+        <rect x="72" y="72" width="6" height="6" />
+        <rect x="84" y="84" width="6" height="6" />
+      </svg>
     </div>
   );
 }

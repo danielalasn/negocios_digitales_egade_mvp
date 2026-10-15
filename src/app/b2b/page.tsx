@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useStore } from '@/store/useStore';
 import { useHydrated } from '@/components/useHydrated';
+import { VisionUploader, VisionData } from '@/components/VisionUploader';
 
 type Tab = 'paquetes' | 'ordenes' | 'nuevo';
 
@@ -23,9 +24,11 @@ export default function B2BPage() {
   const deletePackage = useStore((s) => s.deletePackage);
 
   const [tab, setTab] = useState<Tab>('paquetes');
+  const [creationMode, setCreationMode] = useState<'vision' | 'manual'>('vision');
   const [toast, setToast] = useState('');
   const [f, setF] = useState({ titulo: '', desc: '', cantidad: '5', orig: '', rem: '', hora: '22:00' });
   const [err, setErr] = useState('');
+  const [quickCode, setQuickCode] = useState('');
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setF((p) => ({ ...p, [k]: e.target.value }));
 
@@ -101,10 +104,25 @@ export default function B2BPage() {
     if (r >= o) return setErr('El precio de remate debe ser menor al original.');
     createPackage({ restaurant_id: rest.id, titulo: f.titulo, descripcion: f.desc, cantidad: parseInt(f.cantidad) || 1, precio_original: o, precio_remate: r, hora_limite: f.hora });
     setF({ titulo: '', desc: '', cantidad: '5', orig: '', rem: '', hora: '22:00' });
-    setErr(''); setTab('paquetes'); flash('Bolsa publicada');
+    setErr(''); setTab('paquetes'); flash('Paquete publicado');
   };
 
-  const [quickCode, setQuickCode] = useState('');
+  const handleVisionPublish = (data: VisionData) => {
+    createPackage({
+      restaurant_id: rest.id,
+      titulo: data.titulo,
+      descripcion: data.descripcion,
+      cantidad: 5,
+      precio_original: data.precio_original_total,
+      precio_remate: data.precio_remate_sugerido,
+      hora_limite: data.hora_limite_sugerida,
+      foto_vitrina: data.foto_vitrina,
+      items_detectados: data.items,
+      aprobado_sin_edicion: data.aprobado_sin_edicion,
+    });
+    setTab('paquetes');
+    flash('¡Paquete publicado en 1 clic con IA!');
+  };
 
   const validateCode = (e: React.FormEvent) => {
     e.preventDefault();
@@ -121,9 +139,9 @@ export default function B2BPage() {
   };
 
   const tabs: [Tab, string][] = [
-    ['paquetes', 'Mis bolsas activas'],
+    ['paquetes', 'Mis paquetes activos'],
     ['ordenes', `Pedidos por entregar${pending ? ` (${pending})` : ''}`],
-    ['nuevo', '+ Publicar nueva bolsa'],
+    ['nuevo', '+ Publicar nuevo paquete'],
   ];
 
   return (
@@ -162,7 +180,7 @@ export default function B2BPage() {
 
       {/* Stats row */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6">
-        <Stat label="Bolsas activas" value={active} color="text-accent" />
+        <Stat label="Paquetes activos" value={active} color="text-accent" />
         <Stat label="Pedidos pendientes" value={pending} color={pending > 0 ? "text-amber-500 font-black animate-pulse" : "text-fg"} />
         <Stat label="Ingresos recuperados" value={`$${earnings}`} color="text-emerald-600" />
         <Stat label="Merma evitada" value={`${(myOrders.length * 1.8 + 8).toFixed(0)} kg`} color="text-teal-600" />
@@ -214,36 +232,60 @@ export default function B2BPage() {
       <div className="mt-6">
         {tab === 'paquetes' &&
           (myPkgs.length === 0 ? (
-            <Empty title="Aún no publicas bolsas" sub="Publica tu primera bolsa sorpresa.">
-              <button onClick={() => setTab('nuevo')} className="btn btn-primary mt-5">Publicar bolsa</button>
+            <Empty title="Aún no publicas paquetes" sub="Publica tu primer paquete de comida.">
+              <button onClick={() => setTab('nuevo')} className="btn btn-primary mt-5">Publicar paquete</button>
             </Empty>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {myPkgs.map((p) => {
                 const sold = p.cantidad - p.cantidad_disponible;
                 return (
-                  <article key={p.id} className="card fade-in p-5">
-                    <div className="flex justify-between gap-2">
-                      <h3 className="font-medium leading-snug">{p.titulo}</h3>
-                      <span className={`text-xs ${p.disponible ? 'text-accent' : 'text-danger'}`}>{p.disponible ? 'Activa' : 'Agotada'}</span>
+                  <article key={p.id} className="card fade-in p-5 overflow-hidden flex flex-col justify-between">
+                    <div>
+                      {p.foto_vitrina && (
+                        <div className="relative h-36 -mx-5 -mt-5 mb-4 overflow-hidden border-b border-line bg-black">
+                          <img src={p.foto_vitrina} alt={p.titulo} className="w-full h-full object-cover" />
+                          {p.aprobado_sin_edicion && (
+                            <span className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-black/70 backdrop-blur-md text-[10px] font-bold text-emerald-400 border border-emerald-500/30">
+                              ⚡ Publicado con IA (1-clic)
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      <div className="flex justify-between gap-2">
+                        <h3 className="font-bold leading-snug">{p.titulo}</h3>
+                        <span className={`text-xs font-bold ${p.disponible ? 'text-accent' : 'text-danger'}`}>{p.disponible ? 'Activa' : 'Agotada'}</span>
+                      </div>
+                      <p className="text-xs text-muted mt-1 clamp-2 min-h-8">{p.descripcion || 'Sin descripción'}</p>
+
+                      {p.items_detectados && p.items_detectados.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-2.5">
+                          {p.items_detectados.map((it, idx) => (
+                            <span key={idx} className="text-[10px] bg-subtle px-1.5 py-0.5 rounded text-muted font-medium border border-line/60">
+                              {it.cantidad}x {it.nombre}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="mt-4 flex items-baseline gap-2">
+                        <span className="text-xl font-black text-fg">${p.precio_remate}</span>
+                        <span className="text-sm text-muted line-through">${p.precio_original}</span>
+                        <span className="text-xs text-accent font-bold">-{disc(p.precio_original, p.precio_remate)}%</span>
+                      </div>
                     </div>
-                    <p className="text-sm text-muted mt-1 clamp-2 min-h-10">{p.descripcion || 'Sin descripción'}</p>
-                    <div className="mt-4 flex items-baseline gap-2">
-                      <span className="text-xl font-semibold">${p.precio_remate}</span>
-                      <span className="text-sm text-muted line-through">${p.precio_original}</span>
-                      <span className="text-xs text-accent font-medium">-{disc(p.precio_original, p.precio_remate)}%</span>
-                    </div>
-                    <div className="mt-4">
+
+                    <div className="mt-4 pt-3 border-t border-line/50">
                       <div className="flex justify-between text-xs text-muted mb-1.5">
                         <span>Vendidas {sold}/{p.cantidad}</span><span>Hasta {p.hora_limite}</span>
                       </div>
                       <div className="h-1 rounded-full bg-subtle overflow-hidden">
                         <div className="h-full bg-accent" style={{ width: `${p.cantidad ? (sold / p.cantidad) * 100 : 0}%` }} />
                       </div>
+                      <button id={`delete-pkg-${p.id}`} onClick={() => deletePackage(p.id)} className="mt-3 text-xs text-muted hover:text-danger transition-colors cursor-pointer">
+                        Eliminar
+                      </button>
                     </div>
-                    <button id={`delete-pkg-${p.id}`} onClick={() => deletePackage(p.id)} className="mt-4 text-xs text-muted hover:text-danger transition-colors">
-                      Eliminar
-                    </button>
                   </article>
                 );
               })}
@@ -259,7 +301,7 @@ export default function B2BPage() {
                 <li key={o.id} className="card fade-in p-4 flex items-center gap-4">
                   <span className="font-mono text-lg font-semibold tracking-widest px-3 py-2 rounded-lg bg-subtle border border-line">{o.codigo_recoleccion}</span>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate">{o.titulo ?? 'Bolsa eliminada'}</p>
+                    <p className="font-medium truncate">{o.titulo ?? 'Paquete eliminado'}</p>
                     <p className="text-xs text-muted">
                       {o.cliente ?? 'Cliente'} · {new Date(o.createdAt).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })} · ${o.precio_pagado}
                     </p>
@@ -277,22 +319,59 @@ export default function B2BPage() {
           ))}
 
         {tab === 'nuevo' && (
-          <form onSubmit={publish} className="card fade-in p-6 max-w-xl space-y-4">
-            <div>
-              <h2 className="text-lg font-semibold">Nueva bolsa sorpresa</h2>
-              <p className="text-sm text-muted">Publica tus excedentes del día.</p>
+          <div className="max-w-xl mx-auto space-y-4">
+            <div className="flex p-1 bg-subtle rounded-xl border border-line">
+              <button
+                type="button"
+                onClick={() => setCreationMode('vision')}
+                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  creationMode === 'vision'
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'text-muted hover:text-fg'
+                }`}
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                Foto con IA (Recomendado 1-Clic)
+              </button>
+              <button
+                type="button"
+                onClick={() => setCreationMode('manual')}
+                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                  creationMode === 'manual'
+                    ? 'bg-surface text-fg shadow-xs border border-line'
+                    : 'text-muted hover:text-fg'
+                }`}
+              >
+                Formulario Manual
+              </button>
             </div>
-            <div><label className="label">Título</label><input id="pkg-titulo" className="input" placeholder="Bolsa italiana mixta" value={f.titulo} onChange={set('titulo')} /></div>
-            <div><label className="label">Descripción</label><textarea id="pkg-desc" rows={2} className="input" placeholder="¿Qué puede incluir?" value={f.desc} onChange={set('desc')} /></div>
-            <div className="grid grid-cols-2 gap-3">
-              <div><label className="label">Cantidad</label><input id="pkg-cantidad" type="number" min="1" className="input" value={f.cantidad} onChange={set('cantidad')} /></div>
-              <div><label className="label">Hora límite</label><input id="pkg-hora" type="time" className="input" value={f.hora} onChange={set('hora')} /></div>
-              <div><label className="label">Precio original</label><input id="pkg-precio-orig" type="number" min="1" className="input" placeholder="350" value={f.orig} onChange={set('orig')} /></div>
-              <div><label className="label">Precio de remate</label><input id="pkg-precio-remate" type="number" min="1" className="input" placeholder="99" value={f.rem} onChange={set('rem')} /></div>
-            </div>
-            {err && <p className="text-sm text-danger">{err}</p>}
-            <button id="publish-pkg" className="btn btn-primary w-full">Publicar bolsa</button>
-          </form>
+
+            {creationMode === 'vision' ? (
+              <VisionUploader
+                categoryHint={rest?.categoria || 'panaderia'}
+                restaurantName={rest?.nombre || 'Mi Comercio'}
+                onPublish={handleVisionPublish}
+                onCancel={() => setCreationMode('manual')}
+              />
+            ) : (
+              <form onSubmit={publish} className="card fade-in p-6 space-y-4">
+                <div>
+                  <h2 className="text-lg font-semibold">Nuevo paquete de comida</h2>
+                  <p className="text-sm text-muted">Publica tus excedentes del día de forma manual.</p>
+                </div>
+                <div><label className="label">Título</label><input id="pkg-titulo" className="input" placeholder="Paquete italiano mixto" value={f.titulo} onChange={set('titulo')} /></div>
+                <div><label className="label">Descripción</label><textarea id="pkg-desc" rows={2} className="input" placeholder="¿Qué puede incluir?" value={f.desc} onChange={set('desc')} /></div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div><label className="label">Cantidad</label><input id="pkg-cantidad" type="number" min="1" className="input" value={f.cantidad} onChange={set('cantidad')} /></div>
+                  <div><label className="label">Hora límite</label><input id="pkg-hora" type="time" className="input" value={f.hora} onChange={set('hora')} /></div>
+                  <div><label className="label">Precio original</label><input id="pkg-precio-orig" type="number" min="1" className="input" placeholder="350" value={f.orig} onChange={set('orig')} /></div>
+                  <div><label className="label">Precio de remate</label><input id="pkg-precio-remate" type="number" min="1" className="input" placeholder="99" value={f.rem} onChange={set('rem')} /></div>
+                </div>
+                {err && <p className="text-sm text-danger">{err}</p>}
+                <button id="publish-pkg" className="btn btn-primary w-full">Publicar paquete</button>
+              </form>
+            )}
+          </div>
         )}
       </div>
 

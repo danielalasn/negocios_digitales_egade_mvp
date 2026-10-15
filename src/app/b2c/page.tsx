@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useStore, Package, Restaurant } from '@/store/useStore';
 import { useHydrated } from '@/components/useHydrated';
+import { pilotAnalytics } from '@/lib/pilotAnalytics';
 
 type PkgWithRest = Package & { restaurant: Restaurant };
 
@@ -22,6 +23,16 @@ const CAT_EMOJIS: Record<string, string> = {
   'Mariscos': '🦐',
 };
 
+const MONTERREY_ZONAS = [
+  'Todas las zonas',
+  'DistritoTec',
+  'San Pedro',
+  'Centro',
+  'Cumbres',
+  'Contry',
+  'San Jerónimo',
+];
+
 export default function B2CPage() {
   const router = useRouter();
   const hydrated = useHydrated();
@@ -33,12 +44,16 @@ export default function B2CPage() {
   const createOrder = useStore((s) => s.createOrder);
 
   const [cat, setCat] = useState('Todas');
+  const [zona, setZona] = useState('Todas las zonas');
   const [search, setSearch] = useState('');
   const [onlyUnder100, setOnlyUnder100] = useState(false);
   const [onlyFavs, setOnlyFavs] = useState(false);
   const [selected, setSelected] = useState<PkgWithRest | null>(null);
   const [confirmed, setConfirmed] = useState<{ codigo: string; pkg: PkgWithRest } | null>(null);
   const [showOrders, setShowOrders] = useState(false);
+  const [notificationDismissed, setNotificationDismissed] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<'mercadopago' | 'efectivo'>('mercadopago');
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const available = useMemo<PkgWithRest[]>(
     () =>
@@ -55,6 +70,10 @@ export default function B2CPage() {
   const filtered = useMemo(() => {
     return available.filter((p) => {
       if (cat !== 'Todas' && p.restaurant.categoria !== cat) return false;
+      if (zona !== 'Todas las zonas') {
+        const zClean = zona.toLowerCase().replace(' / valle', '');
+        if (!p.restaurant.direccion.toLowerCase().includes(zClean)) return false;
+      }
       if (onlyUnder100 && p.precio_remate > 100) return false;
       if (onlyFavs && !favs.includes(p.restaurant.id)) return false;
       if (search.trim()) {
@@ -63,11 +82,12 @@ export default function B2CPage() {
         const matchRest = p.restaurant.nombre.toLowerCase().includes(q);
         const matchCat = p.restaurant.categoria.toLowerCase().includes(q);
         const matchDesc = p.descripcion.toLowerCase().includes(q);
-        if (!matchTitle && !matchRest && !matchCat && !matchDesc) return false;
+        const matchZone = p.restaurant.direccion.toLowerCase().includes(q);
+        if (!matchTitle && !matchRest && !matchCat && !matchDesc && !matchZone) return false;
       }
       return true;
     });
-  }, [available, cat, onlyUnder100, onlyFavs, search, favs]);
+  }, [available, cat, zona, onlyUnder100, onlyFavs, search, favs]);
 
   const myOrders = useMemo(
     () =>
@@ -88,7 +108,7 @@ export default function B2CPage() {
     return (
       <div className="mx-auto max-w-md px-4 py-24 text-center">
         <p className="font-bold text-lg">Inicia sesión para explorar</p>
-        <p className="text-sm text-muted mt-1.5">Descubre y rescata bolsas sorpresa cerca de ti.</p>
+        <p className="text-sm text-muted mt-1.5">Descubre y rescata excedentes deliciosos cerca de ti.</p>
         <Link href="/" className="btn btn-primary mt-6 text-xs font-bold inline-flex items-center gap-1.5">
           Ir a iniciar sesión →
         </Link>
@@ -109,11 +129,16 @@ export default function B2CPage() {
     );
   }
 
-  const confirm = () => {
+  const confirm = async () => {
     if (!selected) return;
+    setIsProcessing(true);
+    await new Promise((r) => setTimeout(r, 600));
     const o = createOrder(selected.id);
+    pilotAnalytics.trackConversion(Boolean(selected.foto_vitrina), true);
+    pilotAnalytics.trackSurplusRescued(1.8, 2.5, selected.precio_remate);
     setConfirmed({ codigo: o.codigo_recoleccion, pkg: selected });
     setSelected(null);
+    setIsProcessing(false);
   };
 
   // User impact calculations
@@ -133,7 +158,7 @@ export default function B2CPage() {
             ¡Hola, {currentUser.nombre.split(' ')[0]}!
           </h1>
           <p className="text-sm text-muted mt-1">
-            Hoy hay <strong className="text-fg">{filtered.length} bolsas sorpresa</strong> esperando ser rescatadas en tu zona.
+            Hoy hay <strong className="text-fg">{filtered.length} paquetes disponibles</strong> esperando ser rescatados en tu zona.
           </p>
         </div>
 
@@ -189,26 +214,74 @@ export default function B2CPage() {
         </div>
       </div>
 
+      {/* Smart In-App Notification (Monterrey pilot preference engine) */}
+      {!notificationDismissed && (
+        <div className="mt-5 p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-emerald-500/15 via-teal-500/10 to-surface border border-emerald-500/30 flex items-start sm:items-center justify-between gap-3 shadow-xs">
+          <div className="flex items-start sm:items-center gap-3 min-w-0">
+            <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+                <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+              </svg>
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-black text-fg">Notificación Inteligente</span>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+                  Monterrey
+                </span>
+              </div>
+              <p className="text-xs text-muted mt-0.5 truncate sm:text-wrap">
+                Detectamos <strong>paquetes visibles con foto real</strong> en DistritoTec y San Pedro cerca de ti.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setNotificationDismissed(true)}
+            className="text-muted hover:text-fg text-xs p-1 rounded-md cursor-pointer shrink-0"
+            title="Cerrar notificación"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* Search & Quick Filter bar */}
       <div className="mt-6 space-y-3">
-        <div className="relative">
-          <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-          <input
-            id="search-input"
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar por restaurante, antojo (ej. pizza, sushi, café) o zona..."
-            className="input !pl-10 !py-3 text-sm rounded-xl shadow-xs"
-          />
-          {search && (
-            <button
-              onClick={() => setSearch('')}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-muted hover:text-fg"
+        <div className="flex flex-col sm:flex-row gap-2.5">
+          <div className="relative flex-1">
+            <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            <input
+              id="search-input"
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar por restaurante, antojo (ej. pizza, sushi, café) o colonia..."
+              className="input !pl-10 !py-3 text-sm rounded-xl shadow-xs w-full"
+            />
+            {search && (
+              <button
+                onClick={() => setSearch('')}
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-muted hover:text-fg"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+
+          {/* Monterrey Zone selector */}
+          <div className="sm:w-56 shrink-0">
+            <select
+              id="select-zona"
+              value={zona}
+              onChange={(e) => setZona(e.target.value)}
+              className="input !py-3 text-xs font-bold rounded-xl shadow-xs cursor-pointer"
             >
-              ✕
-            </button>
-          )}
+              {MONTERREY_ZONAS.map((z) => (
+                <option key={z} value={z}>📍 {z}</option>
+              ))}
+            </select>
+          </div>
         </div>
 
         {/* Category Pills */}
@@ -262,7 +335,7 @@ export default function B2CPage() {
           <div className="w-12 h-12 rounded-2xl bg-subtle text-muted flex items-center justify-center mx-auto mb-3">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
           </div>
-          <p className="font-bold text-lg">No encontramos bolsas con esos filtros</p>
+          <p className="font-bold text-lg">No encontramos paquetes con esos filtros</p>
           <p className="text-sm text-muted mt-1">Prueba borrando tu búsqueda o cambiando de categoría.</p>
           <button
             onClick={() => { setCat('Todas'); setSearch(''); setOnlyUnder100(false); setOnlyFavs(false); }}
@@ -281,9 +354,24 @@ export default function B2CPage() {
             return (
               <article
                 key={p.id}
-                className="card card-interactive fade-in p-5 flex flex-col justify-between group"
+                className="card card-interactive fade-in p-5 flex flex-col justify-between group overflow-hidden"
               >
                 <div>
+                  {/* Real Vitrina Photo if available */}
+                  {p.foto_vitrina && (
+                    <div className="relative h-40 -mx-5 -mt-5 mb-3.5 overflow-hidden border-b border-line bg-black">
+                      <img
+                        src={p.foto_vitrina}
+                        alt={p.titulo}
+                        className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-300"
+                      />
+                      <span className="absolute top-2.5 left-2.5 px-2.5 py-1 rounded-lg bg-black/75 backdrop-blur-md text-[10px] font-bold text-white flex items-center gap-1.5 border border-white/20 shadow-xs">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                        Paquete Visible
+                      </span>
+                    </div>
+                  )}
+
                   {/* Top bar: Restaurant info & Favorite */}
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-2.5 min-w-0">
@@ -327,6 +415,20 @@ export default function B2CPage() {
                       </h3>
                     </div>
                     <p className="text-xs text-muted leading-relaxed clamp-2">{p.descripcion}</p>
+
+                    {/* Detected items breakdown */}
+                    {p.items_detectados && p.items_detectados.length > 0 && (
+                      <div className="mt-2.5 flex flex-wrap gap-1">
+                        {p.items_detectados.map((it, idx) => (
+                          <span
+                            key={idx}
+                            className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-semibold border border-emerald-500/20"
+                          >
+                            {it.cantidad}x {it.nombre}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   {/* Badges / Urgency pill */}
@@ -337,7 +439,7 @@ export default function B2CPage() {
                       </span>
                     ) : (
                       <span className="badge badge-subtle">
-                        Quedan {p.cantidad_disponible} bolsas
+                        Quedan {p.cantidad_disponible} paquetes
                       </span>
                     )}
                     <span className="badge badge-subtle flex items-center gap-1">
@@ -364,7 +466,7 @@ export default function B2CPage() {
                     onClick={() => setSelected(p)}
                     className="btn btn-primary !py-2 !px-4 text-xs font-bold"
                   >
-                    Rescatar bolsa
+                    Rescatar paquete
                   </button>
                 </div>
               </article>
@@ -409,15 +511,73 @@ export default function B2CPage() {
         </section>
       )}
 
-      {/* Reservation Confirmation Modal */}
+      {/* Reservation Confirmation Modal (Mercado Pago transparent checkout) */}
       {selected && (
         <Modal onClose={() => setSelected(null)}>
           <div className="text-center pb-2">
+            {selected.foto_vitrina && (
+              <div className="w-full h-32 rounded-xl overflow-hidden mb-3 border border-line bg-black relative">
+                <img src={selected.foto_vitrina} alt={selected.titulo} className="w-full h-full object-cover" />
+                <span className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-black/75 backdrop-blur-md text-[10px] font-bold text-white flex items-center gap-1 border border-white/20">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                  Paquete Visible
+                </span>
+              </div>
+            )}
             <h3 className="text-xl font-black">{selected.titulo}</h3>
             <p className="text-sm text-muted font-medium">{selected.restaurant.nombre}</p>
           </div>
 
-          <div className="my-5 p-4 rounded-xl bg-subtle border border-line space-y-2.5 text-xs">
+          {/* Detected items if available */}
+          {selected.items_detectados && selected.items_detectados.length > 0 && (
+            <div className="my-3 p-3 rounded-xl bg-surface border border-line">
+              <span className="text-[10px] uppercase font-bold text-muted block mb-1.5">
+                Alimentos incluidos (verificados por IA):
+              </span>
+              <div className="flex flex-wrap gap-1">
+                {selected.items_detectados.map((it, idx) => (
+                  <span key={idx} className="text-[11px] font-medium px-2 py-0.5 rounded bg-subtle text-fg">
+                    <strong>{it.cantidad}x</strong> {it.nombre}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Payment Method Selector */}
+          <div className="my-4">
+            <span className="text-[11px] font-bold text-muted uppercase tracking-wider block mb-2">
+              Método de pago
+            </span>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <button
+                type="button"
+                onClick={() => setPaymentMethod('mercadopago')}
+                className={`p-3 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all cursor-pointer ${
+                  paymentMethod === 'mercadopago'
+                    ? 'border-emerald-500 bg-emerald-500/10 text-fg font-bold shadow-xs'
+                    : 'border-line text-muted hover:border-muted'
+                }`}
+              >
+                <span className="text-xs font-black text-sky-600 dark:text-sky-400">Mercado Pago</span>
+                <span className="text-[10px] text-muted">Tarjeta / Saldo MP</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setPaymentMethod('efectivo')}
+                className={`p-3 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all cursor-pointer ${
+                  paymentMethod === 'efectivo'
+                    ? 'border-emerald-500 bg-emerald-500/10 text-fg font-bold shadow-xs'
+                    : 'border-line text-muted hover:border-muted'
+                }`}
+              >
+                <span className="text-xs font-black">💵 Efectivo</span>
+                <span className="text-[10px] text-muted">Paga al recoger</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="my-3 p-4 rounded-xl bg-subtle border border-line space-y-2 text-xs">
             <Row k="Precio regular estimado" v={<span className="line-through text-muted font-mono">${selected.precio_original} MXN</span>} />
             <Row k="Descuento de remate" v={<span className="text-accent font-bold">-{disc(selected.precio_original, selected.precio_remate)}% OFF</span>} />
             <Row k="Horario de recolección" v={<span className="font-semibold text-fg">Hoy antes de {selected.hora_limite}</span>} />
@@ -428,42 +588,55 @@ export default function B2CPage() {
             </div>
           </div>
 
-          <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-[11px] text-muted text-center mb-5">
-            Al reservar evitas que este lote termine en la basura y apoyas al comercio local.
-          </div>
-
           <div className="flex gap-3">
-            <button onClick={() => setSelected(null)} className="btn btn-ghost flex-1 text-xs">
+            <button
+              onClick={() => setSelected(null)}
+              disabled={isProcessing}
+              className="btn btn-ghost flex-1 text-xs"
+            >
               Cancelar
             </button>
-            <button id="confirm-order" onClick={confirm} className="btn btn-primary flex-1 text-xs font-bold">
-              Confirmar y apartar
+            <button
+              id="confirm-order"
+              onClick={confirm}
+              disabled={isProcessing}
+              className="btn btn-primary flex-1 text-xs font-bold flex items-center justify-center gap-2"
+            >
+              {isProcessing ? (
+                <>
+                  <span className="w-3.5 h-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                  Procesando...
+                </>
+              ) : (
+                paymentMethod === 'mercadopago' ? 'Pagar y Apartar' : 'Reservar para pagar en tienda'
+              )}
             </button>
           </div>
         </Modal>
       )}
 
-      {/* Confirmed Ticket Modal */}
+      {/* Confirmed Ticket Modal with QR Code */}
       {confirmed && (
         <Modal onClose={() => setConfirmed(null)}>
           <div className="text-center">
-            <div className="w-12 h-12 rounded-full bg-accent-soft text-accent flex items-center justify-center mx-auto mb-3">
+            <div className="w-12 h-12 rounded-full bg-accent-soft text-accent flex items-center justify-center mx-auto mb-2">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
             </div>
-            <p className="text-xs uppercase font-extrabold tracking-wider text-accent">¡Bolsa Rescatada con Éxito!</p>
+            <p className="text-xs uppercase font-extrabold tracking-wider text-accent">¡Paquete Rescatado con Éxito!</p>
             <h3 className="text-lg font-black mt-1">{confirmed.pkg.restaurant.nombre}</h3>
             <p className="text-xs text-muted mt-0.5">{confirmed.pkg.titulo}</p>
 
-            {/* Ticket representation */}
-            <div className="my-6 rounded-2xl bg-subtle border border-dashed border-accent/40 p-5 relative overflow-hidden">
-              <p className="text-[11px] font-bold text-muted uppercase tracking-wider mb-1">
-                Código para recoger en mostrador
+            {/* Simulated QR Code Visual */}
+            <div className="my-4 p-4 rounded-2xl bg-subtle border border-dashed border-accent/40 text-center">
+              <QrCodeVisual value={confirmed.codigo} />
+              <p className="text-[11px] font-bold text-muted uppercase tracking-wider mt-2 mb-0.5">
+                Código para canje rápido en mostrador
               </p>
-              <p className="text-4xl font-black font-mono tracking-widest text-accent py-2 select-all">
+              <p className="text-3xl font-black font-mono tracking-widest text-accent py-1 select-all">
                 {confirmed.codigo}
               </p>
-              <p className="text-[11px] text-muted mt-1">
-                Muestra este código al personal antes de las <strong>{confirmed.pkg.hora_limite}</strong>
+              <p className="text-[11px] text-muted">
+                Muestra este código o QR al personal antes de las <strong>{confirmed.pkg.hora_limite}</strong>
               </p>
             </div>
 
@@ -475,7 +648,7 @@ export default function B2CPage() {
             <button
               id="close-order-modal"
               onClick={() => setConfirmed(null)}
-              className="btn btn-primary w-full mt-6 text-xs font-bold"
+              className="btn btn-primary w-full mt-5 text-xs font-bold"
             >
               Entendido, ya guardé mi código
             </button>
@@ -502,14 +675,14 @@ export default function B2CPage() {
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
               </div>
               <p className="font-semibold text-sm">Aún no tienes pedidos registrados</p>
-              <p className="text-xs mt-1">¡Rescata tu primera bolsa sorpresa hoy!</p>
+              <p className="text-xs mt-1">¡Rescata tu primer paquete hoy!</p>
             </div>
           ) : (
             <ul className="divide-y divide-line max-h-[55vh] overflow-y-auto pr-1">
               {myOrders.map((o) => (
                 <li key={o.id} className="py-3.5 flex items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="text-sm font-bold truncate text-fg">{o.pkg?.titulo ?? 'Bolsa rescatada'}</p>
+                    <p className="text-sm font-bold truncate text-fg">{o.pkg?.titulo ?? 'Paquete rescatado'}</p>
                     <p className="text-xs text-muted">{o.rest?.nombre}</p>
                     <div className="flex items-center gap-2 mt-1.5 text-xs">
                       <span className="font-mono font-bold px-2 py-0.5 rounded-md bg-subtle border border-line text-fg">
@@ -522,9 +695,68 @@ export default function B2CPage() {
                       </span>
                     </div>
                   </div>
-                  <div className="text-right shrink-0">
-                    <span className="text-base font-extrabold text-fg">${o.precio_pagado}</span>
-                    <span className="block text-[10px] text-muted">MXN</span>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      onClick={() => {
+                        setShowOrders(false);
+                        const pkgData = o.pkg
+                          ? {
+                              ...o.pkg,
+                              restaurant: o.rest || {
+                                id: o.restaurant_id,
+                                nombre: 'Comercio local',
+                                direccion: 'Mostrador del comercio',
+                                categoria: 'Comida',
+                                descripcion: '',
+                                logo: '🍽️',
+                                horario: 'Hoy',
+                                rating: 5,
+                                totalReviews: 1,
+                                ownerId: '',
+                                createdAt: '',
+                              },
+                            }
+                          : {
+                              id: o.package_id,
+                              restaurant_id: o.restaurant_id,
+                              titulo: 'Paquete de comida',
+                              descripcion: 'Recolección en mostrador',
+                              cantidad: 1,
+                              cantidad_disponible: 1,
+                              precio_original: o.precio_pagado * 2,
+                              precio_remate: o.precio_pagado,
+                              hora_limite: '22:00',
+                              disponible: true,
+                              createdAt: o.createdAt,
+                              restaurant: o.rest || {
+                                id: o.restaurant_id,
+                                nombre: 'Comercio local',
+                                direccion: 'Mostrador del comercio',
+                                categoria: 'Comida',
+                                descripcion: '',
+                                logo: '🍽️',
+                                horario: 'Hoy',
+                                rating: 5,
+                                totalReviews: 1,
+                                ownerId: '',
+                                createdAt: '',
+                              },
+                            };
+                        setConfirmed({
+                          codigo: o.codigo_recoleccion,
+                          pkg: pkgData,
+                        });
+                      }}
+                      className="btn btn-secondary !py-1.5 !px-2.5 text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-2xs hover:border-accent/40"
+                      title="Ver código QR para recoger"
+                    >
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M7 7h.01M17 7h.01M7 17h.01M17 17h.01"/></svg>
+                      <span>Ver QR</span>
+                    </button>
+                    <div className="text-right">
+                      <span className="text-base font-extrabold text-fg">${o.precio_pagado}</span>
+                      <span className="block text-[10px] text-muted">MXN</span>
+                    </div>
                   </div>
                 </li>
               ))}
@@ -551,6 +783,39 @@ function Modal({ children, onClose }: { children: React.ReactNode; onClose: () =
       <div className="card fade-in w-full max-w-md p-6 shadow-2xl border-line" onClick={(e) => e.stopPropagation()}>
         {children}
       </div>
+    </div>
+  );
+}
+
+function QrCodeVisual({ value }: { value: string }) {
+  return (
+    <div className="w-32 h-32 mx-auto my-3 p-2 bg-white rounded-xl shadow-xs border border-line flex items-center justify-center">
+      <svg viewBox="0 0 100 100" className="w-full h-full text-zinc-900" fill="currentColor">
+        {/* Corner markers */}
+        <rect x="8" y="8" width="26" height="26" fill="none" stroke="currentColor" strokeWidth="4" rx="2" />
+        <rect x="15" y="15" width="12" height="12" rx="1" />
+        <rect x="66" y="8" width="26" height="26" fill="none" stroke="currentColor" strokeWidth="4" rx="2" />
+        <rect x="73" y="15" width="12" height="12" rx="1" />
+        <rect x="8" y="66" width="26" height="26" fill="none" stroke="currentColor" strokeWidth="4" rx="2" />
+        <rect x="15" y="73" width="12" height="12" rx="1" />
+        {/* Sample data matrix dots */}
+        <rect x="42" y="10" width="6" height="6" />
+        <rect x="52" y="10" width="6" height="6" />
+        <rect x="42" y="22" width="6" height="6" />
+        <rect x="52" y="22" width="6" height="6" />
+        <rect x="10" y="42" width="6" height="6" />
+        <rect x="22" y="42" width="6" height="6" />
+        <rect x="40" y="40" width="8" height="8" />
+        <rect x="56" y="42" width="6" height="6" />
+        <rect x="72" y="42" width="6" height="6" />
+        <rect x="84" y="42" width="6" height="6" />
+        <rect x="42" y="56" width="6" height="6" />
+        <rect x="54" y="56" width="6" height="6" />
+        <rect x="42" y="72" width="6" height="6" />
+        <rect x="54" y="72" width="8" height="8" />
+        <rect x="72" y="72" width="6" height="6" />
+        <rect x="84" y="84" width="6" height="6" />
+      </svg>
     </div>
   );
 }

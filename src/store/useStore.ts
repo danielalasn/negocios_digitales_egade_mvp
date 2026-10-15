@@ -44,6 +44,9 @@ export interface Package {
   precio_remate: number;
   hora_limite: string; // HH:MM format
   disponible: boolean;
+  foto_vitrina?: string;
+  items_detectados?: { nombre: string; cantidad: number; precio_estimado?: number }[];
+  aprobado_sin_edicion?: boolean;
   createdAt: string;
 }
 
@@ -82,12 +85,12 @@ const SEED_USERS: User[] = [
 const SEED_RESTAURANTS: Restaurant[] = [
   {
     id: 'rest-1',
-    nombre: 'La Trattoria Roma',
+    nombre: 'La Trattoria Bella Napoli',
     categoria: 'Italiana',
-    descripcion: 'Auténtica cocina italiana con los mejores ingredientes frescos.',
+    descripcion: 'Auténtica pasta y pizza artesanal napolitana.',
     logo: '🍕',
     horario: '12:00 - 23:00',
-    direccion: 'Av. Insurgentes 234, CDMX',
+    direccion: 'Av. Eugenio Garza Sada 2410, DistritoTec, Monterrey',
     rating: 4.8,
     totalReviews: 312,
     ownerId: 'user-b2b-1',
@@ -100,7 +103,7 @@ const SEED_RESTAURANTS: Restaurant[] = [
     descripcion: 'El mejor sushi de la ciudad, fresco cada día.',
     logo: '🍱',
     horario: '13:00 - 22:00',
-    direccion: 'Polanco, CDMX',
+    direccion: 'Calzada del Valle 401, San Pedro Garza García',
     rating: 4.9,
     totalReviews: 540,
     ownerId: 'user-b2b-2',
@@ -108,12 +111,12 @@ const SEED_RESTAURANTS: Restaurant[] = [
   },
   {
     id: 'rest-3',
-    nombre: 'Taquería El Paisa',
+    nombre: 'Taquería El Pastorcito',
     categoria: 'Mexicana',
-    descripcion: 'Tacos al pastor y quesadillas de maíz artesanal.',
+    descripcion: 'Tacos de trompo, gringas y salsas caseras.',
     logo: '🌮',
     horario: '08:00 - 20:00',
-    direccion: 'Roma Norte, CDMX',
+    direccion: 'Padre Mier 850, Centro, Monterrey',
     rating: 4.7,
     totalReviews: 890,
     ownerId: 'user-b2b-3',
@@ -123,10 +126,10 @@ const SEED_RESTAURANTS: Restaurant[] = [
     id: 'rest-4',
     nombre: 'BurgerCraft',
     categoria: 'Hamburguesas',
-    descripcion: 'Hamburguesas artesanales con papas gourmet.',
+    descripcion: 'Hamburguesas artesanales con papas sazonadas.',
     logo: '🍔',
     horario: '11:00 - 23:00',
-    direccion: 'Condesa, CDMX',
+    direccion: 'Av. Paseo de los Leones 1200, Cumbres, Monterrey',
     rating: 4.6,
     totalReviews: 245,
     ownerId: 'user-b2b-4',
@@ -134,12 +137,12 @@ const SEED_RESTAURANTS: Restaurant[] = [
   },
   {
     id: 'rest-5',
-    nombre: 'Café Dulce & Amargo',
+    nombre: 'Café & Panadería La Espiga',
     categoria: 'Café & Pastelería',
-    descripcion: 'Café de especialidad y repostería artesanal.',
+    descripcion: 'Café de especialidad y pan recién horneado.',
     logo: '☕',
     horario: '07:00 - 21:00',
-    direccion: 'Napoles, CDMX',
+    direccion: 'Av. Alfonso Reyes 220, Contry, Monterrey',
     rating: 4.5,
     totalReviews: 178,
     ownerId: 'user-b2b-5',
@@ -147,12 +150,12 @@ const SEED_RESTAURANTS: Restaurant[] = [
   },
   {
     id: 'rest-6',
-    nombre: 'Thai Garden',
+    nombre: 'Thai Garden Mty',
     categoria: 'Tailandesa',
-    descripcion: 'Sabores auténticos de Tailandia en el corazón de la ciudad.',
+    descripcion: 'Curries y pad thai con recetas tradicionales.',
     logo: '🍜',
     horario: '12:00 - 22:30',
-    direccion: 'Del Valle, CDMX',
+    direccion: 'Av. Fleteros 340, San Jerónimo, Monterrey',
     rating: 4.7,
     totalReviews: 203,
     ownerId: 'user-b2b-6',
@@ -164,20 +167,27 @@ const SEED_PACKAGES: Package[] = [
   {
     id: 'pkg-1',
     restaurant_id: 'rest-1',
-    titulo: 'Bolsa Italiana Mixta',
-    descripcion: 'Pasta, pizza y antipastos del día. ¡Sorpresa garantizada!',
+    titulo: 'Paquete Italiano Mixto',
+    descripcion: 'Pasta, pizza y antipastos del día recién preparados.',
     cantidad: 5,
     cantidad_disponible: 3,
     precio_original: 320,
     precio_remate: 95,
     hora_limite: '21:30',
     disponible: true,
+    foto_vitrina: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&auto=format&fit=crop&q=80',
+    items_detectados: [
+      { nombre: 'Focaccia al romero', cantidad: 2, precio_estimado: 45 },
+      { nombre: 'Porción lasagna bolognesa', cantidad: 1, precio_estimado: 140 },
+      { nombre: 'Cannoli siciliano', cantidad: 2, precio_estimado: 45 },
+    ],
+    aprobado_sin_edicion: true,
     createdAt: new Date().toISOString(),
   },
   {
     id: 'pkg-2',
     restaurant_id: 'rest-2',
-    titulo: 'Caja Sushi Surprise',
+    titulo: 'Caja Sushi Surtida',
     descripcion: 'Rollos, nigiri y temaki seleccionados por el chef.',
     cantidad: 8,
     cantidad_disponible: 5,
@@ -224,6 +234,13 @@ const SEED_PACKAGES: Package[] = [
     precio_remate: 69,
     hora_limite: '20:00',
     disponible: true,
+    foto_vitrina: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=800&auto=format&fit=crop&q=80',
+    items_detectados: [
+      { nombre: 'Croissant de mantequilla', cantidad: 2, precio_estimado: 38 },
+      { nombre: 'Muffin de frambuesa', cantidad: 2, precio_estimado: 42 },
+      { nombre: 'Cold brew 12oz', cantidad: 1, precio_estimado: 60 },
+    ],
+    aprobado_sin_edicion: true,
     createdAt: new Date().toISOString(),
   },
   {

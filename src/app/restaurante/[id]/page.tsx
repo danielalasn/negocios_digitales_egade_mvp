@@ -90,7 +90,7 @@ export default function RestaurantProfilePage() {
         </div>
 
         <h2 className="text-base font-bold text-fg mt-10 mb-4 flex items-center gap-2">
-          <span>Bolsas Sorpresa Disponibles</span>
+          <span>Paquetes Disponibles</span>
           <span className="text-xs font-normal text-muted">({items.length})</span>
         </h2>
 
@@ -106,15 +106,35 @@ export default function RestaurantProfilePage() {
             {items.map((p) => {
               const out = !p.disponible || p.cantidad_disponible <= 0;
               return (
-                <article key={p.id} className={`card card-interactive p-5 flex flex-col justify-between ${out ? 'opacity-60' : ''}`}>
+                <article key={p.id} className={`card card-interactive p-5 flex flex-col justify-between overflow-hidden ${out ? 'opacity-60' : ''}`}>
                   <div>
+                    {p.foto_vitrina && (
+                      <div className="relative h-36 -mx-5 -mt-5 mb-3.5 overflow-hidden border-b border-line bg-black">
+                        <img src={p.foto_vitrina} alt={p.titulo} className="w-full h-full object-cover" />
+                        <span className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-black/75 backdrop-blur-md text-[10px] font-bold text-white flex items-center gap-1 border border-white/20">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                          Paquete Visible
+                        </span>
+                      </div>
+                    )}
                     <div className="flex items-start justify-between gap-2">
                       <h3 className="font-bold text-base leading-snug">{p.titulo}</h3>
                       <span className={`badge text-[10px] ${out ? 'badge-hot' : 'badge-eco'}`}>
-                        {out ? 'Agotada' : `Quedan ${p.cantidad_disponible}`}
+                        {out ? 'Agotado' : `Quedan ${p.cantidad_disponible}`}
                       </span>
                     </div>
                     <p className="text-xs text-muted mt-2 clamp-2">{p.descripcion}</p>
+
+                    {p.items_detectados && p.items_detectados.length > 0 && (
+                      <div className="mt-2.5 flex flex-wrap gap-1">
+                        {p.items_detectados.map((it, idx) => (
+                          <span key={idx} className="text-[10px] bg-subtle px-1.5 py-0.5 rounded text-muted font-medium border border-line/60">
+                            {it.cantidad}x {it.nombre}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
                     <p className="text-[11px] text-muted mt-3">
                       Recoger hoy antes de las <strong>{p.hora_limite}</strong>
                     </p>
@@ -136,7 +156,7 @@ export default function RestaurantProfilePage() {
                         onClick={() => setCode({ codigo: createOrder(p.id).codigo_recoleccion, titulo: p.titulo })}
                         className="btn btn-primary !py-2 !px-4 text-xs font-bold disabled:opacity-40"
                       >
-                        {out ? 'Agotada' : 'Rescatar bolsa'}
+                        {out ? 'Agotado' : 'Rescatar paquete'}
                       </button>
                     ) : !currentUser ? (
                       <Link href="/" className="btn btn-primary !py-2 !px-3 text-xs font-bold">

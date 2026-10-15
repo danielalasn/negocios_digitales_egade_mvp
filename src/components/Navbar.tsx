@@ -33,6 +33,7 @@ export function Navbar() {
         </Link>
 
         <div className="flex items-center gap-2.5">
+
           {user && (
             <Link
               href="/perfil"
