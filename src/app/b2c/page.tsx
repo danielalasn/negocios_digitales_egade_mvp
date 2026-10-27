@@ -214,10 +214,10 @@ export default function B2CPage() {
         </div>
       </div>
 
-      {/* Smart In-App Notification (Monterrey pilot preference engine) */}
+      {/* Smart In-App Notification (Monterrey pilot preference engine - Slide 3 & 4) */}
       {!notificationDismissed && (
-        <div className="mt-5 p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-emerald-500/15 via-teal-500/10 to-surface border border-emerald-500/30 flex items-start sm:items-center justify-between gap-3 shadow-xs">
-          <div className="flex items-start sm:items-center gap-3 min-w-0">
+        <div className="mt-5 p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-emerald-500/15 via-teal-500/10 to-surface border border-emerald-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+          <div className="flex items-start gap-3 min-w-0">
             <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
@@ -226,23 +226,34 @@ export default function B2CPage() {
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-black text-fg">Notificación Inteligente</span>
+                <span className="text-xs font-black text-fg">Notificación Hiper-Local IA</span>
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
-                  Monterrey
+                  Hipótesis H2 (Sin Sorpresas)
                 </span>
               </div>
-              <p className="text-xs text-muted mt-0.5 truncate sm:text-wrap">
-                Detectamos <strong>paquetes visibles con foto real</strong> en DistritoTec y San Pedro cerca de ti.
+              <p className="text-xs text-muted mt-1 leading-relaxed">
+                ¡Hola {currentUser.nombre.split(' ')[0]}! La IA detectó <strong>paquetes visibles con foto real</strong> en comercios de tu zona habitual a más del <strong>60% de descuento</strong>. Solo te avisamos cuando hay algo que sí te gusta y puedes comer.
               </p>
             </div>
           </div>
-          <button
-            onClick={() => setNotificationDismissed(true)}
-            className="text-muted hover:text-fg text-xs p-1 rounded-md cursor-pointer shrink-0"
-            title="Cerrar notificación"
-          >
-            ✕
-          </button>
+          <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+            <button
+              onClick={() => {
+                setZona('DistritoTec');
+                pilotAnalytics.trackConversion(true, false);
+              }}
+              className="btn btn-secondary !py-1 !px-2.5 text-xs font-bold cursor-pointer"
+            >
+              Ver cercanos →
+            </button>
+            <button
+              onClick={() => setNotificationDismissed(true)}
+              className="text-muted hover:text-fg text-xs p-1 rounded-md cursor-pointer"
+              title="Cerrar notificación"
+            >
+              ✕
+            </button>
+          </div>
         </div>
       )}
 

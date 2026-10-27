@@ -26,6 +26,7 @@ export default function B2BPage() {
   const [tab, setTab] = useState<Tab>('paquetes');
   const [creationMode, setCreationMode] = useState<'vision' | 'manual'>('vision');
   const [toast, setToast] = useState('');
+  const [forecastApplied, setForecastApplied] = useState(false);
   const [f, setF] = useState({ titulo: '', desc: '', cantidad: '5', orig: '', rem: '', hora: '22:00' });
   const [err, setErr] = useState('');
   const [quickCode, setQuickCode] = useState('');
@@ -210,6 +211,68 @@ export default function B2BPage() {
             Validar
           </button>
         </form>
+      </div>
+
+      {/* AI Production Forecast for Tomorrow (AI Flywheel - Slide 3 & 5) */}
+      <div className="mt-6 card p-5 border-emerald-500/25 bg-gradient-to-br from-emerald-500/5 via-surface to-teal-500/5 shadow-xs">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-line/60">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 text-base font-bold">
+              📈
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-xs font-bold text-fg">Pronóstico IA de Producción para Mañana</h2>
+                <span className="badge badge-eco text-[10px] font-bold">AI Flywheel</span>
+              </div>
+              <p className="text-[11px] text-muted">
+                Cada foto al cierre alimenta el modelo predictivo. La IA sugiere; tú decides la producción final.
+              </p>
+            </div>
+          </div>
+          <span className="text-[10px] text-muted font-medium bg-subtle px-2 py-1 rounded-md shrink-0">
+            18 fotos históricas analizadas
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
+          <div className="p-3 rounded-xl bg-surface/80 border border-line">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted block">Patrón Detectado</span>
+            <span className="text-xs font-black text-amber-500 block mt-1">Excedente recurrente (+18%)</span>
+            <span className="text-[11px] text-muted block mt-0.5">Bollería dulce y conchas suelen quedar al cierre.</span>
+          </div>
+
+          <div className="p-3 rounded-xl bg-surface/80 border border-line">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted block">Sugerencia IA para Mañana</span>
+            <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 block mt-1">Reducir 1ª tanda -12%</span>
+            <span className="text-[11px] text-muted block mt-0.5">Hornear 4-6 piezas menos al abrir para evitar merma.</span>
+          </div>
+
+          <div className="p-3 rounded-xl bg-surface/80 border border-line">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted block">Ahorro en Materia Prima</span>
+            <span className="text-xs font-black text-fg block mt-1">~$190 - $240 MXN</span>
+            <span className="text-[11px] text-muted block mt-0.5">Dinero no tirado a la basura desde la mañana.</span>
+          </div>
+        </div>
+
+        <div className="mt-4 pt-3 border-t border-line/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-[11px]">
+          <span className="text-muted">
+            {forecastApplied
+              ? '✓ Sugerencia adoptada en la orden de producción de cocina.'
+              : '¿Deseas registrar este ajuste en la orden de producción de mañana?'}
+          </span>
+          <button
+            onClick={() => {
+              setForecastApplied(!forecastApplied);
+              flash(forecastApplied ? 'Ajuste desmarcado' : '¡Ajuste de producción registrado para mañana!');
+            }}
+            className={`btn !py-1 !px-3 text-xs font-bold cursor-pointer shrink-0 ${
+              forecastApplied ? 'btn-ghost text-muted' : 'btn-primary'
+            }`}
+          >
+            {forecastApplied ? 'Deshacer ajuste' : 'Aplicar ajuste a cocina →'}
+          </button>
+        </div>
       </div>
 
       <div className="mt-8 flex gap-2 border-b border-line pb-1 overflow-x-auto no-scrollbar">

@@ -124,6 +124,39 @@ export default function PilotDashboardPage() {
         </div>
       </div>
 
+      {/* Methodology Phases Banner (Entregable 2 Alignment) */}
+      <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="p-3.5 rounded-2xl bg-surface border border-line flex items-start gap-3">
+          <div className="w-7 h-7 rounded-lg bg-subtle text-muted flex items-center justify-center text-xs font-bold shrink-0">
+            P1
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-fg">Paso 1: 1 semana sin programar (WhatsApp)</span>
+              <span className="text-[10px] bg-subtle text-muted px-1.5 py-0.5 rounded font-semibold">Línea base</span>
+            </div>
+            <p className="text-[11px] text-muted mt-0.5">
+              8–10 comercios de Monterrey enviaron foto al cierre y destino de merma. Reemplazó la línea base estimada con datos reales.
+            </p>
+          </div>
+        </div>
+
+        <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 flex items-start gap-3">
+          <div className="w-7 h-7 rounded-lg bg-emerald-500 text-white flex items-center justify-center text-xs font-bold shrink-0">
+            P2
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">Paso 2: 3–4 semanas en MVP Web</span>
+              <span className="badge badge-eco text-[10px] font-bold">Fase actual</span>
+            </div>
+            <p className="text-[11px] text-muted mt-0.5">
+              Prueba simultánea sobre el MVP de H1 (subidas sin push), H2 (paquete visible A/B p &lt; 0.05), H3 (precisión IA &ge; 89%) y H5 (precio piso).
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Interactive Simulation Bar */}
       <div className="mb-6 p-4 rounded-2xl bg-surface border border-line shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
@@ -166,7 +199,7 @@ export default function PilotDashboardPage() {
           <p className="text-xs text-muted mt-1 font-medium">Tasa de excedente rescatado</p>
           <div className="mt-3 text-[11px] text-muted flex items-center justify-between border-t border-line/60 pt-2">
             <span>Kg totales: <strong>{currentSummary.northStar.totalKgRescued} kg</strong></span>
-            <span className="text-emerald-600 dark:text-emerald-400 font-bold">Línea base: 0%</span>
+            <span className="text-emerald-600 dark:text-emerald-400 font-bold" title="Medido en Paso 1 (WhatsApp)">Vs Línea base Paso 1: 0%</span>
           </div>
         </div>
 

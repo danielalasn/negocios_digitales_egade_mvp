@@ -5,10 +5,10 @@ export function ComparisonTable() {
     <section className="max-w-3xl mx-auto my-12 text-left">
       <div className="text-center mb-6">
         <h2 className="text-xl sm:text-2xl font-black text-fg">
-          ¿Por qué Buen Bocado vs Bolsas Sorpresa tradicionales?
+          ¿Por qué Buen Bocado vs Cheaf y Bolsas Sorpresa?
         </h2>
         <p className="text-xs text-muted mt-1">
-          Diseñado para comercios de barrio en Monterrey (el 98% de los restaurantes en México son PyMEs).
+          Diseñado para el comercio de barrio en Monterrey (el 98% de los restaurantes en México son PyMEs).
         </p>
       </div>
 
@@ -18,7 +18,7 @@ export function ComparisonTable() {
             <tr className="border-b border-line text-muted uppercase text-[10px] tracking-wider font-bold">
               <th className="py-2.5 px-3">Característica</th>
               <th className="py-2.5 px-3 text-emerald-600 dark:text-emerald-400 font-black">Buen Bocado (AI-Native)</th>
-              <th className="py-2.5 px-3 text-muted">Bolsas Sorpresa tradicionales</th>
+              <th className="py-2.5 px-3 text-muted">Cheaf / Bolsas Sorpresa tradicionales</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-line/60">
