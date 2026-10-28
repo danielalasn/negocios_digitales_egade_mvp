@@ -151,7 +151,7 @@ export default function PilotDashboardPage() {
               <span className="badge badge-eco text-[10px] font-bold">Fase actual</span>
             </div>
             <p className="text-[11px] text-muted mt-0.5">
-              Prueba simultánea sobre el MVP de H1 (subidas sin push), H2 (paquete visible A/B p &lt; 0.05), H3 (precisión IA &ge; 89%) y H5 (precio piso).
+              Prueba simultánea sobre el MVP de H1 (subidas sin push), H2 (paquete visible A/B p &lt; 0.05), H3 (precisión IA &ge; 90%) y H5 (precio piso).
             </p>
           </div>
         </div>

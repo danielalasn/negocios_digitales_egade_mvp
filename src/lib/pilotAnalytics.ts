@@ -26,7 +26,7 @@ export interface PilotMetricsSummary {
   };
   // H3: AI Technical Performance
   h3: {
-    targetAccuracy: number; // 89%
+    targetAccuracy: number; // 90% (Entregable V3)
     approvalWithoutEditRate: number;
     marginalCostPerPhotoUSD: number;
     totalPhotosAnalyzed: number;
@@ -161,11 +161,11 @@ class PilotAnalytics {
         status: 'supera_significativamente',
       },
       h3: {
-        targetAccuracy: 89,
+        targetAccuracy: 90,
         approvalWithoutEditRate: Number(aiRate.toFixed(1)),
         marginalCostPerPhotoUSD: 0.0013,
         totalPhotosAnalyzed: 142 + aiEvents.length,
-        status: aiRate >= 89 ? 'cumplida' : 'en_calibracion',
+        status: aiRate >= 90 ? 'cumplida' : 'en_calibracion',
       },
       northStar: {
         rescueRate: 68.4,

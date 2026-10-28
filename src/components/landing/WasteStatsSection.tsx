@@ -24,9 +24,9 @@ export function WasteStatsSection() {
         </div>
 
         <div className="p-4 rounded-2xl bg-surface border border-line">
-          <span className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400 block">13%</span>
-          <span className="text-xs font-bold text-fg block mt-1">Merma evitable en restaurantes</span>
-          <span className="text-[10px] text-muted block mt-0.5">De lo que compran se tira (WRAP)</span>
+          <span className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400 block">7% – 10%</span>
+          <span className="text-xs font-bold text-fg block mt-1">Merma diaria de producción</span>
+          <span className="text-[10px] text-muted block mt-0.5">No vendida al cierre (Samray / MDPI 2023)</span>
         </div>
       </div>
     </section>
