@@ -3,7 +3,8 @@ import { pool, requireUser, errorResponse, HttpError } from '@/lib/serverAuth';
 
 /**
  * Real metrics computed from the database. Only accounts that exist in Supabase Auth are
- * counted, so legacy demo rows never enter the numbers. Restricted to ADMIN_EMAILS.
+ * counted, so legacy demo rows never enter the numbers. Admin accounts (ADMIN_EMAILS) are
+ * excluded from every figure. Restricted to ADMIN_EMAILS.
  */
 export async function GET(req: Request) {
   try {
@@ -19,13 +20,15 @@ export async function GET(req: Request) {
     const realMerchants = `
       SELECT r.id, r.nombre, r.created_at
         FROM restaurants r
-        JOIN auth.users a ON a.id::text = r.owner_id`;
+        JOIN auth.users a ON a.id::text = r.owner_id
+       WHERE lower(a.email) <> ALL($1::text[])`;
 
     const [accounts, merchants, vision, baskets, orders] = await Promise.all([
       pool.query(`
         SELECT u.rol, count(*)::int AS n
           FROM users u JOIN auth.users a ON a.id::text = u.id
-         GROUP BY u.rol`),
+         WHERE lower(a.email) <> ALL($1::text[])
+         GROUP BY u.rol`, [admins]),
       pool.query(`
         SELECT m.id, m.nombre,
                (SELECT count(*)::int FROM products p WHERE p.merchant_id = m.id AND p.active) AS products,
@@ -36,7 +39,7 @@ export async function GET(req: Request) {
                (SELECT count(*)::int FROM orders o WHERE o.restaurant_id = m.id) AS orders,
                (SELECT count(*)::int FROM orders o WHERE o.restaurant_id = m.id AND o.estado = 'completada') AS completed
           FROM (${realMerchants}) m
-         ORDER BY m.created_at`),
+         ORDER BY m.created_at`, [admins]),
       pool.query(`
         SELECT count(*)::int AS analyses,
                count(*) FILTER (WHERE (e.payload->>'is_food')::boolean = false)::int AS rejected,
@@ -44,18 +47,19 @@ export async function GET(req: Request) {
                sum((e.payload->>'promptTokens')::numeric) AS prompt_tokens,
                sum((e.payload->>'outputTokens')::numeric) AS output_tokens
           FROM analytics_events e
-         WHERE e.type = 'vision_analysis' AND e.merchant_id IN (SELECT id FROM (${realMerchants}) m)`),
+         WHERE e.type = 'vision_analysis' AND e.merchant_id IN (SELECT id FROM (${realMerchants}) m)`, [admins]),
       pool.query(`
         SELECT count(*)::int AS confirmed,
                count(*) FILTER (WHERE (e.payload->>'approvedWithoutEdit')::boolean)::int AS clean
           FROM analytics_events e
-         WHERE e.type = 'basket_confirmation' AND e.merchant_id IN (SELECT id FROM (${realMerchants}) m)`),
+         WHERE e.type = 'basket_confirmation' AND e.merchant_id IN (SELECT id FROM (${realMerchants}) m)`, [admins]),
       pool.query(`
         SELECT count(*)::int AS created,
                count(*) FILTER (WHERE o.estado = 'completada')::int AS completed,
                coalesce(sum(o.precio_pagado) FILTER (WHERE o.estado = 'completada'), 0)::float AS revenue
           FROM orders o
-          JOIN auth.users a ON a.id::text = o.user_id`),
+          JOIN auth.users a ON a.id::text = o.user_id
+         WHERE lower(a.email) <> ALL($1::text[])`, [admins]),
     ]);
 
     const v = vision.rows[0];
