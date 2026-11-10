@@ -153,7 +153,14 @@ export default function RestaurantProfilePage() {
                       <button
                         id={`profile-reserve-${p.id}`}
                         disabled={out}
-                        onClick={() => setCode({ codigo: createOrder(p.id).codigo_recoleccion, titulo: p.titulo })}
+                        onClick={async () => {
+                          try {
+                            const o = await createOrder(p.id);
+                            setCode({ codigo: o.codigo_recoleccion, titulo: p.titulo });
+                          } catch (err) {
+                            alert(err instanceof Error ? err.message : 'No se pudo completar la reserva.');
+                          }
+                        }}
                         className="btn btn-primary !py-2 !px-4 text-xs font-bold disabled:opacity-40"
                       >
                         {out ? 'Agotado' : 'Rescatar paquete'}

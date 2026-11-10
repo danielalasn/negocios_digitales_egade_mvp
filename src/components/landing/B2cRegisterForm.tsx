@@ -4,20 +4,28 @@ import { useState } from 'react';
 
 interface B2cRegisterFormProps {
   onBack: () => void;
-  onSubmit: (data: { nombre: string; email: string }) => void;
-  isEmailTaken: (email: string) => boolean;
+  onSubmit: (data: { nombre: string; email: string; password: string }) => Promise<void>;
 }
 
-export function B2cRegisterForm({ onBack, onSubmit, isEmailTaken }: B2cRegisterFormProps) {
+export function B2cRegisterForm({ onBack, onSubmit }: B2cRegisterFormProps) {
   const [nombre, setNombre] = useState('');
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!nombre.trim() || !email.trim()) return setError('Completa todos los campos.');
-    if (isEmailTaken(email)) return setError('Ese correo ya está registrado.');
-    onSubmit({ nombre: nombre.trim(), email: email.trim() });
+    if (!nombre.trim() || !email.trim() || !password) return setError('Completa todos los campos.');
+    if (password.length < 6) return setError('La contraseña debe tener al menos 6 caracteres.');
+    setError('');
+    setLoading(true);
+    try {
+      await onSubmit({ nombre: nombre.trim(), email: email.trim(), password });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo crear la cuenta.');
+      setLoading(false);
+    }
   };
 
   return (
@@ -55,13 +63,30 @@ export function B2cRegisterForm({ onBack, onSubmit, isEmailTaken }: B2cRegisterF
           className="input"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+          autoComplete="email"
+        />
+      </div>
+
+      <div>
+        <label className="label">Contraseña (mínimo 6 caracteres)</label>
+        <input
+          id="b2c-password"
+          type="password"
+          className="input"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          autoComplete="new-password"
         />
       </div>
 
       {error && <p className="text-sm font-medium text-danger bg-danger-soft p-3 rounded-xl">{error}</p>}
 
-      <button id="b2c-submit" className="btn btn-primary w-full !py-3 font-semibold cursor-pointer">
-        Empezar a rescatar comida →
+      <button
+        id="b2c-submit"
+        disabled={loading}
+        className="btn btn-primary w-full !py-3 font-semibold cursor-pointer disabled:opacity-60"
+      >
+        {loading ? 'Creando cuenta...' : 'Empezar a rescatar comida →'}
       </button>
     </form>
   );

@@ -61,18 +61,18 @@ export default function ConsumerProfilePage() {
   const moneySaved = myOrders.reduce((acc, o) => {
     const orig = o.pkg?.precio_original ?? (o.precio_pagado * 2.5);
     return acc + Math.max(0, orig - o.precio_pagado);
-  }, 0) + 380; // Baseline demo savings
-  const kgFoodSaved = ((totalBags + 3) * 1.6).toFixed(1);
-  const co2Avoided = ((totalBags + 3) * 2.5).toFixed(1);
+  }, 0);
+  const kgFoodSaved = (totalBags * 1.6).toFixed(1);
+  const co2Avoided = (totalBags * 2.5).toFixed(1);
 
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!nombre.trim() || !email.trim()) {
+    if (!nombre.trim()) {
       setError('Por favor completa todos los campos.');
       return;
     }
     setError('');
-    updateUserProfile({ nombre: nombre.trim(), email: email.trim() });
+    updateUserProfile({ nombre: nombre.trim() });
     setToast('¡Perfil actualizado correctamente!');
     setTimeout(() => setToast(''), 3000);
   };
@@ -183,8 +183,8 @@ export default function ConsumerProfilePage() {
                   id="profile-email"
                   type="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="input text-xs"
+                  readOnly
+                  className="input text-xs opacity-70"
                   placeholder="correo@ejemplo.com"
                 />
               </div>

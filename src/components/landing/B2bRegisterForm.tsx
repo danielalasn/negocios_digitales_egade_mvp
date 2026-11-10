@@ -20,16 +20,16 @@ interface B2bRegisterFormProps {
   onSubmit: (data: {
     nombre: string;
     email: string;
+    password: string;
     restaurantName: string;
     categoria: string;
     descripcion: string;
     horario: string;
     direccion: string;
-  }) => void;
-  isEmailTaken: (email: string) => boolean;
+  }) => Promise<void>;
 }
 
-export function B2bRegisterForm({ onBack, onSubmit, isEmailTaken }: B2bRegisterFormProps) {
+export function B2bRegisterForm({ onBack, onSubmit }: B2bRegisterFormProps) {
   const [f, setF] = useState({
     nombre: '',
     email: '',
@@ -38,27 +38,37 @@ export function B2bRegisterForm({ onBack, onSubmit, isEmailTaken }: B2bRegisterF
     desc: '',
     horario: '09:00 - 22:00',
     dir: '',
+    password: '',
   });
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
     setF((p) => ({ ...p, [k]: e.target.value }));
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!f.nombre.trim() || !f.email.trim() || !f.restName.trim() || !f.dir.trim()) {
+    if (!f.nombre.trim() || !f.email.trim() || !f.restName.trim() || !f.dir.trim() || !f.password) {
       return setError('Completa los campos obligatorios.');
     }
-    if (isEmailTaken(f.email)) return setError('Ese correo ya está registrado.');
-    onSubmit({
-      nombre: f.nombre.trim(),
-      email: f.email.trim(),
-      restaurantName: f.restName.trim(),
-      categoria: f.cat,
-      descripcion: f.desc.trim(),
-      horario: f.horario.trim(),
-      direccion: f.dir.trim(),
-    });
+    if (f.password.length < 6) return setError('La contraseña debe tener al menos 6 caracteres.');
+    setError('');
+    setLoading(true);
+    try {
+      await onSubmit({
+        nombre: f.nombre.trim(),
+        email: f.email.trim(),
+        password: f.password,
+        restaurantName: f.restName.trim(),
+        categoria: f.cat,
+        descripcion: f.desc.trim(),
+        horario: f.horario.trim(),
+        direccion: f.dir.trim(),
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo crear la cuenta.');
+      setLoading(false);
+    }
   };
 
   return (
@@ -98,6 +108,18 @@ export function B2bRegisterForm({ onBack, onSubmit, isEmailTaken }: B2bRegisterF
             onChange={set('email')}
           />
         </div>
+      </div>
+
+      <div>
+        <label className="label">Contraseña (mínimo 6 caracteres)</label>
+        <input
+          id="b2b-password"
+          type="password"
+          className="input"
+          value={f.password}
+          onChange={set('password')}
+          autoComplete="new-password"
+        />
       </div>
 
       <div>
@@ -157,8 +179,12 @@ export function B2bRegisterForm({ onBack, onSubmit, isEmailTaken }: B2bRegisterF
 
       {error && <p className="text-sm font-medium text-danger bg-danger-soft p-3 rounded-xl">{error}</p>}
 
-      <button id="b2b-submit" className="btn btn-primary w-full !py-3 font-semibold cursor-pointer">
-        Activar mi restaurante en Buen Bocado →
+      <button
+        id="b2b-submit"
+        disabled={loading}
+        className="btn btn-primary w-full !py-3 font-semibold cursor-pointer disabled:opacity-60"
+      >
+        {loading ? 'Creando cuenta...' : 'Activar mi restaurante en Buen Bocado →'}
       </button>
     </form>
   );

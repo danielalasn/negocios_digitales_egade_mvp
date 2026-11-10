@@ -15,7 +15,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     setTheme(document.documentElement.classList.contains('dark') ? 'dark' : 'light');
-    useStore.getState().syncFromSupabase();
+    useStore.getState().initAuth();
   }, []);
 
   const toggleTheme = () => {

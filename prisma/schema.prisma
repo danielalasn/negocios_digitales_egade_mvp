@@ -1,8 +1,6 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
@@ -10,4 +8,101 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+}
+
+model User {
+  id                    String       @id @default(cuid())
+  nombre                String
+  email                 String       @unique
+  rol                   String       @default("b2c") // "b2b" | "b2c"
+  restaurantesFavoritos String[]     @default([]) @map("restaurantes_favoritos")
+  createdAt             DateTime     @default(now()) @map("created_at")
+  restaurants           Restaurant[]
+
+  @@map("users")
+}
+
+model Restaurant {
+  id              String           @id @default(cuid())
+  nombre          String
+  categoria       String
+  descripcion     String?          @db.Text
+  logo            String?
+  horario         String?
+  direccion       String?
+  rating          Float?           @default(4.8)
+  totalReviews    Int?             @default(0) @map("total_reviews")
+  ownerId         String           @map("owner_id")
+  createdAt       DateTime         @default(now()) @map("created_at")
+  owner           User?            @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  products        Product[]
+  baskets         Basket[]
+  analyticsEvents AnalyticsEvent[]
+
+  @@index([ownerId])
+  @@map("restaurants")
+}
+
+model Product {
+  id                String       @id @default(cuid())
+  merchantId        String       @map("merchant_id")
+  name              String
+  photoUrl          String       @map("photo_url")
+  regularPriceCents Int          @map("regular_price_cents") // En centavos MXN (ej. $198.00 MXN = 19800)
+  maxDiscountPct    Int          @map("max_discount_pct") // Porcentaje entero: ej. 60 para 60%
+  visualDescriptor  String?      @map("visual_descriptor") @db.Text
+  active            Boolean      @default(true) // Desactivación lógica en lugar de borrado físico
+  createdAt         DateTime     @default(now()) @map("created_at")
+  updatedAt         DateTime     @updatedAt @map("updated_at")
+  restaurant        Restaurant   @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  basketItems       BasketItem[]
+
+  @@index([merchantId, active])
+  @@map("products")
+}
+
+model Basket {
+  id             String       @id @default(cuid())
+  merchantId     String       @map("merchant_id")
+  status         String       @default("draft") // "draft" | "published"
+  sourcePhotoRef String?      @map("source_photo_ref") @db.Text
+  createdAt      DateTime     @default(now()) @map("created_at")
+  publishedAt    DateTime?    @map("published_at")
+  restaurant     Restaurant   @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  items          BasketItem[]
+
+  @@index([merchantId, status])
+  @@map("baskets")
+}
+
+model BasketItem {
+  id                String   @id @default(cuid())
+  basketId          String   @map("basket_id")
+  productId         String   @map("product_id")
+  name              String // Copia congelada del nombre al momento de publicar
+  regularPriceCents Int      @map("regular_price_cents") // Copia congelada del precio regular en centavos
+  unitPriceCents    Int      @map("unit_price_cents") // Precio de remate final en centavos
+  quantity          Int
+  source            String   @default("ai") // "ai" | "manual"
+  edited            Boolean  @default(false)
+  aiConfidence      Float?   @map("ai_confidence")
+  basket            Basket   @relation(fields: [basketId], references: [id], onDelete: Cascade)
+  product           Product  @relation(fields: [productId], references: [id])
+
+  @@index([basketId])
+  @@index([productId])
+  @@map("basket_items")
+}
+
+model AnalyticsEvent {
+  id         String      @id @default(cuid())
+  merchantId String?     @map("merchant_id")
+  type       String // "vision_analysis" | "basket_confirmation" | "conversion_event" | "merchant_upload"
+  timestamp  DateTime    @default(now())
+  payload    Json // Metadatos estructurados: modelo, tokens, latencia, precisión, etc.
+  restaurant Restaurant? @relation(fields: [merchantId], references: [id], onDelete: SetNull)
+
+  @@index([merchantId, type])
+  @@index([timestamp])
+  @@map("analytics_events")
 }

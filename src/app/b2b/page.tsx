@@ -5,9 +5,10 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useStore } from '@/store/useStore';
 import { useHydrated } from '@/components/useHydrated';
-import { VisionUploader, VisionData } from '@/components/VisionUploader';
+import { VisionUploader } from '@/components/VisionUploader';
+import { CatalogManager } from '@/components/b2b/CatalogManager';
 
-type Tab = 'paquetes' | 'ordenes' | 'nuevo';
+type Tab = 'paquetes' | 'ordenes' | 'nuevo' | 'catalogo';
 
 const disc = (o: number, r: number) => Math.round(((o - r) / o) * 100);
 
@@ -22,6 +23,7 @@ export default function B2BPage() {
   const createPackage = useStore((s) => s.createPackage);
   const updateOrderStatus = useStore((s) => s.updateOrderStatus);
   const deletePackage = useStore((s) => s.deletePackage);
+  const syncFromSupabase = useStore((s) => s.syncFromSupabase);
 
   const [tab, setTab] = useState<Tab>('paquetes');
   const [creationMode, setCreationMode] = useState<'vision' | 'manual'>('vision');
@@ -33,11 +35,7 @@ export default function B2BPage() {
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setF((p) => ({ ...p, [k]: e.target.value }));
 
-  const rest =
-    restaurants.find((r) => r.ownerId === currentUser?.id || (r as any).owner_id === currentUser?.id) ||
-    (currentUser?.id === 'user-b2b-1' || currentUser?.email === 'marco@trattoria.com'
-      ? restaurants.find((r) => r.id === 'rest-1') || restaurants[0]
-      : (currentUser?.rol === 'b2b' ? restaurants[0] : undefined));
+  const rest = restaurants.find((r) => r.ownerId === currentUser?.id);
 
   const myPkgs = useMemo(() => packages.filter((p) => p.restaurant_id === rest?.id), [packages, rest]);
   const myOrders = useMemo(
@@ -108,21 +106,10 @@ export default function B2BPage() {
     setErr(''); setTab('paquetes'); flash('Paquete publicado');
   };
 
-  const handleVisionPublish = (data: VisionData) => {
-    createPackage({
-      restaurant_id: rest.id,
-      titulo: data.titulo,
-      descripcion: data.descripcion,
-      cantidad: 5,
-      precio_original: data.precio_original_total,
-      precio_remate: data.precio_remate_sugerido,
-      hora_limite: data.hora_limite_sugerida,
-      foto_vitrina: data.foto_vitrina,
-      items_detectados: data.items,
-      aprobado_sin_edicion: data.aprobado_sin_edicion,
-    });
+  const handleVisionPublished = async () => {
+    await syncFromSupabase();
     setTab('paquetes');
-    flash('¡Paquete publicado en 1 clic con IA!');
+    flash('Lote confirmado y publicado en el marketplace');
   };
 
   const validateCode = (e: React.FormEvent) => {
@@ -143,6 +130,7 @@ export default function B2BPage() {
     ['paquetes', 'Mis paquetes activos'],
     ['ordenes', `Pedidos por entregar${pending ? ` (${pending})` : ''}`],
     ['nuevo', '+ Publicar nuevo paquete'],
+    ['catalogo', 'Mi catálogo'],
   ];
 
   return (
@@ -381,8 +369,10 @@ export default function B2BPage() {
             </ul>
           ))}
 
+        {tab === 'catalogo' && rest && <CatalogManager merchantId={rest.id} />}
+
         {tab === 'nuevo' && (
-          <div className="max-w-xl mx-auto space-y-4">
+          <div className={`mx-auto space-y-4 transition-all duration-200 ${creationMode === 'vision' ? 'max-w-3xl' : 'max-w-xl'}`}>
             <div className="flex p-1 bg-subtle rounded-xl border border-line">
               <button
                 type="button"
@@ -411,9 +401,7 @@ export default function B2BPage() {
 
             {creationMode === 'vision' ? (
               <VisionUploader
-                categoryHint={rest?.categoria || 'panaderia'}
-                restaurantName={rest?.nombre || 'Mi Comercio'}
-                onPublish={handleVisionPublish}
+                onPublished={handleVisionPublished}
                 onCancel={() => setCreationMode('manual')}
               />
             ) : (

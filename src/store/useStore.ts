@@ -1,6 +1,5 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import { supabase } from '@/lib/supabase';
+import { supabase, authHeaders } from '@/lib/supabase';
 
 // ========================
 // TYPES
@@ -63,216 +62,38 @@ export interface Order {
   createdAt: string;
 }
 
-const SEED_USERS: User[] = [
-  {
-    id: 'user-b2b-1',
-    nombre: 'Chef Marco',
-    email: 'marco@trattoria.com',
-    rol: 'b2b',
-    restaurantes_favoritos: [],
-    createdAt: '2024-01-01T00:00:00Z',
-  },
-  {
-    id: 'demo-client',
-    nombre: 'Sofía Martínez',
-    email: 'sofia@demo.com',
-    rol: 'b2c',
-    restaurantes_favoritos: ['rest-1', 'rest-3'],
-    createdAt: '2024-01-01T00:00:00Z',
-  },
-];
-
-const SEED_RESTAURANTS: Restaurant[] = [
-  {
-    id: 'rest-1',
-    nombre: 'La Trattoria Bella Napoli',
-    categoria: 'Italiana',
-    descripcion: 'Auténtica pasta y pizza artesanal napolitana.',
-    logo: '🍕',
-    horario: '12:00 - 23:00',
-    direccion: 'Av. Eugenio Garza Sada 2410, DistritoTec, Monterrey',
-    rating: 4.8,
-    totalReviews: 312,
-    ownerId: 'user-b2b-1',
-    createdAt: '2024-01-01T00:00:00Z',
-  },
-  {
-    id: 'rest-2',
-    nombre: 'Sushi Nakama',
-    categoria: 'Japonesa',
-    descripcion: 'El mejor sushi de la ciudad, fresco cada día.',
-    logo: '🍱',
-    horario: '13:00 - 22:00',
-    direccion: 'Calzada del Valle 401, San Pedro Garza García',
-    rating: 4.9,
-    totalReviews: 540,
-    ownerId: 'user-b2b-2',
-    createdAt: '2024-01-02T00:00:00Z',
-  },
-  {
-    id: 'rest-3',
-    nombre: 'Taquería El Pastorcito',
-    categoria: 'Mexicana',
-    descripcion: 'Tacos de trompo, gringas y salsas caseras.',
-    logo: '🌮',
-    horario: '08:00 - 20:00',
-    direccion: 'Padre Mier 850, Centro, Monterrey',
-    rating: 4.7,
-    totalReviews: 890,
-    ownerId: 'user-b2b-3',
-    createdAt: '2024-01-03T00:00:00Z',
-  },
-  {
-    id: 'rest-4',
-    nombre: 'BurgerCraft',
-    categoria: 'Hamburguesas',
-    descripcion: 'Hamburguesas artesanales con papas sazonadas.',
-    logo: '🍔',
-    horario: '11:00 - 23:00',
-    direccion: 'Av. Paseo de los Leones 1200, Cumbres, Monterrey',
-    rating: 4.6,
-    totalReviews: 245,
-    ownerId: 'user-b2b-4',
-    createdAt: '2024-01-04T00:00:00Z',
-  },
-  {
-    id: 'rest-5',
-    nombre: 'Café & Panadería La Espiga',
-    categoria: 'Café & Pastelería',
-    descripcion: 'Café de especialidad y pan recién horneado.',
-    logo: '☕',
-    horario: '07:00 - 21:00',
-    direccion: 'Av. Alfonso Reyes 220, Contry, Monterrey',
-    rating: 4.5,
-    totalReviews: 178,
-    ownerId: 'user-b2b-5',
-    createdAt: '2024-01-05T00:00:00Z',
-  },
-  {
-    id: 'rest-6',
-    nombre: 'Thai Garden Mty',
-    categoria: 'Tailandesa',
-    descripcion: 'Curries y pad thai con recetas tradicionales.',
-    logo: '🍜',
-    horario: '12:00 - 22:30',
-    direccion: 'Av. Fleteros 340, San Jerónimo, Monterrey',
-    rating: 4.7,
-    totalReviews: 203,
-    ownerId: 'user-b2b-6',
-    createdAt: '2024-01-06T00:00:00Z',
-  },
-];
-
-const SEED_PACKAGES: Package[] = [
-  {
-    id: 'pkg-1',
-    restaurant_id: 'rest-1',
-    titulo: 'Paquete Italiano Mixto',
-    descripcion: 'Pasta, pizza y antipastos del día recién preparados.',
-    cantidad: 5,
-    cantidad_disponible: 3,
-    precio_original: 320,
-    precio_remate: 95,
-    hora_limite: '21:30',
-    disponible: true,
-    foto_vitrina: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&auto=format&fit=crop&q=80',
-    items_detectados: [
-      { nombre: 'Focaccia al romero', cantidad: 2, precio_estimado: 45 },
-      { nombre: 'Porción lasagna bolognesa', cantidad: 1, precio_estimado: 140 },
-      { nombre: 'Cannoli siciliano', cantidad: 2, precio_estimado: 45 },
-    ],
-    aprobado_sin_edicion: true,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'pkg-2',
-    restaurant_id: 'rest-2',
-    titulo: 'Caja Sushi Surtida',
-    descripcion: 'Rollos, nigiri y temaki seleccionados por el chef.',
-    cantidad: 8,
-    cantidad_disponible: 5,
-    precio_original: 480,
-    precio_remate: 149,
-    hora_limite: '21:00',
-    disponible: true,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'pkg-3',
-    restaurant_id: 'rest-3',
-    titulo: 'Pack Taquero Completo',
-    descripcion: '12 tacos surtidos con salsas y bebida incluida.',
-    cantidad: 10,
-    cantidad_disponible: 7,
-    precio_original: 180,
-    precio_remate: 55,
-    hora_limite: '19:30',
-    disponible: true,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'pkg-4',
-    restaurant_id: 'rest-4',
-    titulo: 'Burger & Fries Combo',
-    descripcion: '2 hamburguesas artesanales con papas y refresco.',
-    cantidad: 4,
-    cantidad_disponible: 2,
-    precio_original: 290,
-    precio_remate: 89,
-    hora_limite: '22:00',
-    disponible: true,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'pkg-5',
-    restaurant_id: 'rest-5',
-    titulo: 'Desayuno & Café Gourmet',
-    descripcion: 'Croissants, pays, panqués y un café de especialidad.',
-    cantidad: 6,
-    cantidad_disponible: 4,
-    precio_original: 220,
-    precio_remate: 69,
-    hora_limite: '20:00',
-    disponible: true,
-    foto_vitrina: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=800&auto=format&fit=crop&q=80',
-    items_detectados: [
-      { nombre: 'Croissant de mantequilla', cantidad: 2, precio_estimado: 38 },
-      { nombre: 'Muffin de frambuesa', cantidad: 2, precio_estimado: 42 },
-      { nombre: 'Cold brew 12oz', cantidad: 1, precio_estimado: 60 },
-    ],
-    aprobado_sin_edicion: true,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'pkg-6',
-    restaurant_id: 'rest-6',
-    titulo: 'Thai Feast Box',
-    descripcion: 'Pad Thai, curry verde y arroz frito tailandés.',
-    cantidad: 5,
-    cantidad_disponible: 3,
-    precio_original: 360,
-    precio_remate: 109,
-    hora_limite: '21:30',
-    disponible: true,
-    createdAt: new Date().toISOString(),
-  },
-];
-
 // ========================
 // HELPERS
 // ========================
 
-function generateCode(): string {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  let code = '#';
-  for (let i = 0; i < 4; i++) {
-    code += chars[Math.floor(Math.random() * chars.length)];
-  }
-  return code;
+function generateId(): string {
+  return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 }
 
-function generateId(): string {
-  return Math.random().toString(36).slice(2, 10);
+/** Translates Supabase Auth errors into user-facing Spanish messages. */
+function authErrorMessage(message: string): string {
+  const m = message.toLowerCase();
+  if (m.includes('invalid login')) return 'Correo o contraseña incorrectos.';
+  if (m.includes('already registered') || m.includes('already been registered'))
+    return 'Ese correo ya está registrado. Inicia sesión.';
+  if (m.includes('password') && m.includes('characters')) return 'La contraseña debe tener al menos 6 caracteres.';
+  if (m.includes('rate limit')) return 'Demasiados intentos. Espera un momento e intenta de nuevo.';
+  if (m.includes('email not confirmed')) return 'Confirma tu correo antes de iniciar sesión.';
+  return message;
+}
+
+export interface SignUpData {
+  email: string;
+  password: string;
+  nombre: string;
+  rol: UserRole;
+  business?: {
+    restaurantName: string;
+    categoria: string;
+    descripcion: string;
+    horario: string;
+    direccion: string;
+  };
 }
 
 // ========================
@@ -280,25 +101,26 @@ function generateId(): string {
 // ========================
 
 interface AppState {
-  // Auth
+  // Auth (source of truth is the Supabase session)
   currentUser: User | null;
+  authReady: boolean;
 
-  // Data
+  // Data mirrored from the database (filtered by Row Level Security)
   users: User[];
   restaurants: Restaurant[];
   packages: Package[];
   orders: Order[];
 
   // Actions - Auth
-  login: (user: User) => void;
-  logout: () => void;
-  updateUserProfile: (data: { nombre: string; email: string }) => void;
-  registerUser: (data: { nombre: string; email: string; rol: UserRole }) => User;
-  registerRestaurant: (data: { nombre: string; email: string; restaurantName: string; categoria: string; descripcion: string; horario: string; direccion: string }) => { user: User; restaurant: Restaurant };
+  initAuth: () => Promise<void>;
+  signUp: (data: SignUpData) => Promise<User>;
+  signIn: (email: string, password: string) => Promise<User>;
+  logout: () => Promise<void>;
+  updateUserProfile: (data: { nombre: string }) => void;
 
   // Actions - B2C
   toggleFavorite: (restaurantId: string) => void;
-  createOrder: (packageId: string) => Order;
+  createOrder: (packageId: string) => Promise<Order>;
 
   // Actions - B2B
   createPackage: (data: Omit<Package, 'id' | 'createdAt' | 'cantidad_disponible' | 'disponible'>) => Package;
@@ -321,10 +143,10 @@ const mapRestaurantFromDB = (r: any): Restaurant => ({
   nombre: r.nombre,
   categoria: r.categoria,
   descripcion: r.descripcion || '',
-  logo: r.logo || '🍽️',
-  horario: r.horario || '09:00 - 22:00',
-  direccion: r.direccion,
-  rating: parseFloat(r.rating) || 4.8,
+  logo: r.logo || '',
+  horario: r.horario || '',
+  direccion: r.direccion || '',
+  rating: Number(r.rating) || 0,
   totalReviews: r.total_reviews || 0,
   ownerId: r.owner_id || '',
   createdAt: r.created_at || new Date().toISOString(),
@@ -341,6 +163,9 @@ const mapPackageFromDB = (p: any): Package => ({
   precio_remate: parseFloat(p.precio_remate),
   hora_limite: p.hora_limite,
   disponible: p.disponible,
+  foto_vitrina: p.foto_vitrina || undefined,
+  items_detectados: p.items_detectados || undefined,
+  aprobado_sin_edicion: p.aprobado_sin_edicion ?? undefined,
   createdAt: p.created_at || new Date().toISOString(),
 });
 
@@ -364,320 +189,253 @@ const mapUserFromDB = (u: any): User => ({
   createdAt: u.created_at || new Date().toISOString(),
 });
 
-export const useStore = create<AppState>()(
-  persist(
-    (set, get) => ({
-      currentUser: null,
-      users: SEED_USERS,
-      restaurants: SEED_RESTAURANTS,
-      packages: SEED_PACKAGES,
-      orders: [],
+let authListenerAttached = false;
 
-      syncFromSupabase: async () => {
-        try {
-          const [uRes, rRes, pRes, oRes] = await Promise.all([
-            supabase.from('users').select('*'),
-            supabase.from('restaurants').select('*'),
-            supabase.from('packages').select('*'),
-            supabase.from('orders').select('*'),
-          ]);
+export const useStore = create<AppState>()((set, get) => ({
+  currentUser: null,
+  authReady: false,
+  users: [],
+  restaurants: [],
+  packages: [],
+  orders: [],
 
-          const updates: Partial<AppState> = {};
-          if (uRes.data && uRes.data.length > 0) {
-            updates.users = uRes.data.map(mapUserFromDB);
-            const curr = get().currentUser;
-            if (curr) {
-              const found = updates.users.find((u) => u.id === curr.id);
-              if (found) updates.currentUser = found;
-            }
-          }
-          if (rRes.data && rRes.data.length > 0) {
-            updates.restaurants = rRes.data.map(mapRestaurantFromDB);
-          }
-          if (pRes.data && pRes.data.length > 0) {
-            updates.packages = pRes.data.map(mapPackageFromDB);
-          }
-          if (oRes.data) {
-            updates.orders = oRes.data.map(mapOrderFromDB);
-          }
-          set(updates);
-        } catch (err) {
-          console.error('Error syncing from Supabase:', err);
-        }
-      },
+  // ---- SYNC ----
+  syncFromSupabase: async () => {
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const sessionUser = sessionData.session?.user ?? null;
 
-      // ---- AUTH ----
-      login: (user) =>
-        set((s) => ({
-          currentUser: user,
-          users: s.users.some((u) => u.id === user.id) ? s.users : [...s.users, user],
-        })),
-      logout: () => set({ currentUser: null }),
-      updateUserProfile: (data) => {
-        const { currentUser } = get();
-        if (!currentUser) return;
-        const updated: User = {
-          ...currentUser,
-          nombre: data.nombre,
-          email: data.email,
-        };
-        set((s) => ({
-          currentUser: updated,
-          users: s.users.map((u) => (u.id === updated.id ? updated : u)),
-        }));
+      const [uRes, rRes, pRes, oRes] = await Promise.all([
+        sessionUser ? supabase.from('users').select('*') : Promise.resolve({ data: [] as any[] }),
+        supabase.from('restaurants').select('*'),
+        supabase.from('packages').select('*'),
+        sessionUser ? supabase.from('orders').select('*') : Promise.resolve({ data: [] as any[] }),
+      ]);
 
-        supabase
-          .from('users')
-          .update({ nombre: data.nombre, email: data.email })
-          .eq('id', currentUser.id)
-          .then(({ error }) => {
-            if (error) console.error('Supabase updateUser error:', error);
-          });
-      },
-
-      registerUser: (data) => {
-        const newUser: User = {
-          id: `user-${generateId()}`,
-          nombre: data.nombre,
-          email: data.email,
-          rol: data.rol,
-          restaurantes_favoritos: [],
-          createdAt: new Date().toISOString(),
-        };
-        set((s) => ({ users: [...s.users, newUser], currentUser: newUser }));
-
-        supabase
-          .from('users')
-          .insert({
-            id: newUser.id,
-            nombre: newUser.nombre,
-            email: newUser.email,
-            rol: newUser.rol,
-            restaurantes_favoritos: [],
-          })
-          .then(({ error }) => {
-            if (error) console.error('Supabase registerUser error:', error);
-          });
-
-        return newUser;
-      },
-
-      registerRestaurant: (data) => {
-        const newUser: User = {
-          id: `user-${generateId()}`,
-          nombre: data.nombre,
-          email: data.email,
-          rol: 'b2b',
-          restaurantes_favoritos: [],
-          createdAt: new Date().toISOString(),
-        };
-        const newRestaurant: Restaurant = {
-          id: `rest-${generateId()}`,
-          nombre: data.restaurantName,
-          categoria: data.categoria,
-          descripcion: data.descripcion,
-          logo: '🍽️',
-          horario: data.horario,
-          direccion: data.direccion,
-          rating: 0,
-          totalReviews: 0,
-          ownerId: newUser.id,
-          createdAt: new Date().toISOString(),
-        };
-        set((s) => ({
-          users: [...s.users, newUser],
-          restaurants: [...s.restaurants, newRestaurant],
-          currentUser: newUser,
-        }));
-
-        supabase
-          .from('users')
-          .insert({
-            id: newUser.id,
-            nombre: newUser.nombre,
-            email: newUser.email,
-            rol: 'b2b',
-            restaurantes_favoritos: [],
-          })
-          .then(() => {
-            supabase.from('restaurants').insert({
-              id: newRestaurant.id,
-              nombre: newRestaurant.nombre,
-              categoria: newRestaurant.categoria,
-              descripcion: newRestaurant.descripcion,
-              logo: newRestaurant.logo,
-              horario: newRestaurant.horario,
-              direccion: newRestaurant.direccion,
-              rating: newRestaurant.rating,
-              total_reviews: newRestaurant.totalReviews,
-              owner_id: newUser.id,
-            }).then(({ error }) => {
-              if (error) console.error('Supabase registerRestaurant error:', error);
-            });
-          });
-
-        return { user: newUser, restaurant: newRestaurant };
-      },
-
-      // ---- B2C ----
-      toggleFavorite: (restaurantId) => {
-        const { currentUser } = get();
-        if (!currentUser) return;
-        const isFav = currentUser.restaurantes_favoritos.includes(restaurantId);
-        const nextFavs = isFav
-          ? currentUser.restaurantes_favoritos.filter((id) => id !== restaurantId)
-          : [...currentUser.restaurantes_favoritos, restaurantId];
-        const updated: User = {
-          ...currentUser,
-          restaurantes_favoritos: nextFavs,
-        };
-        set((s) => ({
-          currentUser: updated,
-          users: s.users.map((u) => (u.id === updated.id ? updated : u)),
-        }));
-
-        supabase
-          .from('users')
-          .update({ restaurantes_favoritos: nextFavs })
-          .eq('id', currentUser.id)
-          .then(({ error }) => {
-            if (error) console.error('Supabase toggleFavorite error:', error);
-          });
-      },
-
-      createOrder: (packageId) => {
-        const { currentUser, packages } = get();
-        if (!currentUser) throw new Error('No user logged in');
-        const pkg = packages.find((p) => p.id === packageId);
-        if (!pkg) throw new Error('Package not found');
-
-        const newOrder: Order = {
-          id: `order-${generateId()}`,
-          package_id: packageId,
-          user_id: currentUser.id,
-          restaurant_id: pkg.restaurant_id,
-          codigo_recoleccion: generateCode(),
-          estado: 'pendiente',
-          precio_pagado: pkg.precio_remate,
-          createdAt: new Date().toISOString(),
-        };
-
-        const nextDisponibles = Math.max(0, pkg.cantidad_disponible - 1);
-        const nextDisponible = nextDisponibles > 0;
-
-        set((s) => ({
-          orders: [...s.orders, newOrder],
-          packages: s.packages.map((p) =>
-            p.id === packageId
-              ? { ...p, cantidad_disponible: nextDisponibles, disponible: nextDisponible }
-              : p
-          ),
-        }));
-
-        supabase.from('orders').insert({
-          id: newOrder.id,
-          package_id: newOrder.package_id,
-          user_id: newOrder.user_id,
-          restaurant_id: newOrder.restaurant_id,
-          codigo_recoleccion: newOrder.codigo_recoleccion,
-          estado: newOrder.estado,
-          precio_pagado: newOrder.precio_pagado,
-        }).then(({ error }) => {
-          if (error) console.error('Supabase createOrder error:', error);
-        });
-
-        supabase.from('packages').update({
-          cantidad_disponible: nextDisponibles,
-          disponible: nextDisponible,
-        }).eq('id', packageId).then(({ error }) => {
-          if (error) console.error('Supabase update package quantity error:', error);
-        });
-
-        return newOrder;
-      },
-
-      // ---- B2B ----
-      createPackage: (data) => {
-        const newPkg: Package = {
-          ...data,
-          id: `pkg-${generateId()}`,
-          cantidad_disponible: data.cantidad,
-          disponible: true,
-          createdAt: new Date().toISOString(),
-        };
-        set((s) => ({ packages: [...s.packages, newPkg] }));
-
-        supabase.from('packages').insert({
-          id: newPkg.id,
-          restaurant_id: newPkg.restaurant_id,
-          titulo: newPkg.titulo,
-          descripcion: newPkg.descripcion,
-          cantidad: newPkg.cantidad,
-          cantidad_disponible: newPkg.cantidad_disponible,
-          precio_original: newPkg.precio_original,
-          precio_remate: newPkg.precio_remate,
-          hora_limite: newPkg.hora_limite,
-          disponible: newPkg.disponible,
-        }).then(({ error }) => {
-          if (error) console.error('Supabase createPackage error:', error);
-        });
-
-        return newPkg;
-      },
-
-      updateOrderStatus: (orderId, estado) => {
-        set((s) => ({
-          orders: s.orders.map((o) => (o.id === orderId ? { ...o, estado } : o)),
-        }));
-
-        supabase.from('orders').update({ estado }).eq('id', orderId).then(({ error }) => {
-          if (error) console.error('Supabase updateOrderStatus error:', error);
-        });
-      },
-
-      deletePackage: (packageId) => {
-        set((s) => ({ packages: s.packages.filter((p) => p.id !== packageId) }));
-
-        supabase.from('packages').delete().eq('id', packageId).then(({ error }) => {
-          if (error) console.error('Supabase deletePackage error:', error);
-        });
-      },
-
-      // ---- SELECTORS ----
-      getRestaurantPackages: (restaurantId) => {
-        return get().packages.filter((p) => p.restaurant_id === restaurantId);
-      },
-
-      getRestaurantOrders: (restaurantId) => {
-        return get().orders.filter((o) => o.restaurant_id === restaurantId);
-      },
-
-      getAvailablePackages: () => {
-        const { packages, restaurants } = get();
-        return packages
-          .filter((p) => p.disponible && p.cantidad_disponible > 0)
-          .map((p) => ({
-            ...p,
-            restaurant: restaurants.find((r) => r.id === p.restaurant_id)!,
-          }))
-          .filter((p) => p.restaurant);
-      },
-
-      getUserOrders: (userId) => {
-        const { orders, packages, restaurants } = get();
-        return orders
-          .filter((o) => o.user_id === userId)
-          .map((o) => ({
-            ...o,
-            package: packages.find((p) => p.id === o.package_id)!,
-            restaurant: restaurants.find((r) => r.id === o.restaurant_id)!,
-          }))
-          .filter((o) => o.package && o.restaurant);
-      },
-    }),
-    {
-      name: '2g2g-store',
-      version: 1,
+      const users = (uRes.data || []).map(mapUserFromDB);
+      set({
+        users,
+        currentUser: sessionUser ? users.find((u) => u.id === sessionUser.id) ?? null : null,
+        restaurants: (rRes.data || []).map(mapRestaurantFromDB),
+        packages: (pRes.data || []).map(mapPackageFromDB),
+        orders: (oRes.data || []).map(mapOrderFromDB),
+      });
+    } catch (err) {
+      console.error('Error syncing from Supabase:', err);
     }
-  )
-);
+  },
+
+  // ---- AUTH ----
+  initAuth: async () => {
+    if (!authListenerAttached) {
+      authListenerAttached = true;
+      supabase.auth.onAuthStateChange((event) => {
+        if (event === 'SIGNED_OUT') set({ currentUser: null, users: [], orders: [] });
+      });
+    }
+    await get().syncFromSupabase();
+    set({ authReady: true });
+  },
+
+  signUp: async (data) => {
+    const { error, data: res } = await supabase.auth.signUp({
+      email: data.email.trim(),
+      password: data.password,
+      options: {
+        data: {
+          nombre: data.nombre,
+          rol: data.rol,
+          restaurant_name: data.business?.restaurantName,
+          categoria: data.business?.categoria,
+          descripcion: data.business?.descripcion,
+          horario: data.business?.horario,
+          direccion: data.business?.direccion,
+        },
+      },
+    });
+    if (error) throw new Error(authErrorMessage(error.message));
+    if (!res.session) {
+      throw new Error('Tu cuenta se creó, pero requiere confirmar el correo antes de entrar.');
+    }
+    await get().syncFromSupabase();
+    const user = get().currentUser;
+    if (!user) throw new Error('No se pudo cargar tu perfil. Intenta iniciar sesión.');
+    return user;
+  },
+
+  signIn: async (email, password) => {
+    const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+    if (error) throw new Error(authErrorMessage(error.message));
+    await get().syncFromSupabase();
+    const user = get().currentUser;
+    if (!user) throw new Error('Tu cuenta no tiene un perfil asociado.');
+    return user;
+  },
+
+  logout: async () => {
+    await supabase.auth.signOut();
+    set({ currentUser: null, users: [], orders: [] });
+  },
+
+  updateUserProfile: (data) => {
+    const { currentUser } = get();
+    if (!currentUser) return;
+    const updated: User = { ...currentUser, nombre: data.nombre };
+    set((s) => ({
+      currentUser: updated,
+      users: s.users.map((u) => (u.id === updated.id ? updated : u)),
+    }));
+
+    supabase
+      .from('users')
+      .update({ nombre: data.nombre })
+      .eq('id', currentUser.id)
+      .then(({ error }) => {
+        if (error) {
+          console.error('Supabase updateUser error:', error);
+          get().syncFromSupabase();
+        }
+      });
+  },
+
+  // ---- B2C ----
+  toggleFavorite: (restaurantId) => {
+    const { currentUser } = get();
+    if (!currentUser) return;
+    const isFav = currentUser.restaurantes_favoritos.includes(restaurantId);
+    const nextFavs = isFav
+      ? currentUser.restaurantes_favoritos.filter((id) => id !== restaurantId)
+      : [...currentUser.restaurantes_favoritos, restaurantId];
+    const updated: User = { ...currentUser, restaurantes_favoritos: nextFavs };
+    set((s) => ({
+      currentUser: updated,
+      users: s.users.map((u) => (u.id === updated.id ? updated : u)),
+    }));
+
+    supabase
+      .from('users')
+      .update({ restaurantes_favoritos: nextFavs })
+      .eq('id', currentUser.id)
+      .then(({ error }) => {
+        if (error) {
+          console.error('Supabase toggleFavorite error:', error);
+          get().syncFromSupabase();
+        }
+      });
+  },
+
+  createOrder: async (packageId) => {
+    const res = await fetch('/api/orders', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+      body: JSON.stringify({ packageId }),
+    });
+    const json = await res.json();
+    if (!res.ok || !json.success) {
+      await get().syncFromSupabase();
+      throw new Error(json.user_message || json.message || 'No se pudo completar la reserva.');
+    }
+    const order = json.order as Order;
+    set((s) => ({
+      orders: [...s.orders, order],
+      packages: s.packages.map((p) =>
+        p.id === packageId
+          ? { ...p, cantidad_disponible: json.remaining, disponible: json.remaining > 0 }
+          : p
+      ),
+    }));
+    return order;
+  },
+
+  // ---- B2B ----
+  createPackage: (data) => {
+    const newPkg: Package = {
+      ...data,
+      id: `pkg-${generateId()}`,
+      cantidad_disponible: data.cantidad,
+      disponible: true,
+      createdAt: new Date().toISOString(),
+    };
+    set((s) => ({ packages: [...s.packages, newPkg] }));
+
+    supabase
+      .from('packages')
+      .insert({
+        id: newPkg.id,
+        restaurant_id: newPkg.restaurant_id,
+        titulo: newPkg.titulo,
+        descripcion: newPkg.descripcion,
+        cantidad: newPkg.cantidad,
+        cantidad_disponible: newPkg.cantidad_disponible,
+        precio_original: newPkg.precio_original,
+        precio_remate: newPkg.precio_remate,
+        hora_limite: newPkg.hora_limite,
+        disponible: newPkg.disponible,
+      })
+      .then(({ error }) => {
+        if (error) {
+          console.error('Supabase createPackage error:', error);
+          get().syncFromSupabase();
+        }
+      });
+
+    return newPkg;
+  },
+
+  updateOrderStatus: (orderId, estado) => {
+    set((s) => ({
+      orders: s.orders.map((o) => (o.id === orderId ? { ...o, estado } : o)),
+    }));
+
+    supabase
+      .from('orders')
+      .update({ estado })
+      .eq('id', orderId)
+      .then(({ error }) => {
+        if (error) {
+          console.error('Supabase updateOrderStatus error:', error);
+          get().syncFromSupabase();
+        }
+      });
+  },
+
+  deletePackage: (packageId) => {
+    set((s) => ({ packages: s.packages.filter((p) => p.id !== packageId) }));
+
+    supabase
+      .from('packages')
+      .delete()
+      .eq('id', packageId)
+      .then(({ error }) => {
+        if (error) {
+          console.error('Supabase deletePackage error:', error);
+          get().syncFromSupabase();
+        }
+      });
+  },
+
+  // ---- SELECTORS ----
+  getRestaurantPackages: (restaurantId) => get().packages.filter((p) => p.restaurant_id === restaurantId),
+
+  getRestaurantOrders: (restaurantId) => get().orders.filter((o) => o.restaurant_id === restaurantId),
+
+  getAvailablePackages: () => {
+    const { packages, restaurants } = get();
+    return packages
+      .filter((p) => p.disponible && p.cantidad_disponible > 0)
+      .map((p) => ({ ...p, restaurant: restaurants.find((r) => r.id === p.restaurant_id)! }))
+      .filter((p) => p.restaurant);
+  },
+
+  getUserOrders: (userId) => {
+    const { orders, packages, restaurants } = get();
+    return orders
+      .filter((o) => o.user_id === userId)
+      .map((o) => ({
+        ...o,
+        package: packages.find((p) => p.id === o.package_id)!,
+        restaurant: restaurants.find((r) => r.id === o.restaurant_id)!,
+      }))
+      .filter((o) => o.package && o.restaurant);
+  },
+}));

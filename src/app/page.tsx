@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useStore, User } from '@/store/useStore';
+import { useStore } from '@/store/useStore';
 import { useHydrated } from '@/components/useHydrated';
 import { RecoveryCalculator } from '@/components/RecoveryCalculator';
 import { HeroSection } from '@/components/landing/HeroSection';
@@ -11,7 +11,7 @@ import { AiFlowSteps } from '@/components/landing/AiFlowSteps';
 import { ComparisonTable } from '@/components/landing/ComparisonTable';
 import { WasteStatsSection } from '@/components/landing/WasteStatsSection';
 import { ActiveSessionBanner } from '@/components/landing/ActiveSessionBanner';
-import { QuickDemoBar } from '@/components/landing/QuickDemoBar';
+import { LoginPrompt } from '@/components/landing/LoginPrompt';
 import { B2cRegisterForm } from '@/components/landing/B2cRegisterForm';
 import { B2bRegisterForm } from '@/components/landing/B2bRegisterForm';
 import { LoginForm } from '@/components/landing/LoginForm';
@@ -21,10 +21,9 @@ type Step = 'role' | 'b2c' | 'b2b' | 'login';
 export default function HomePage() {
   const router = useRouter();
   const hydrated = useHydrated();
-  const { currentUser, users, login, logout, registerUser, registerRestaurant } = useStore();
+  const { currentUser, logout, signUp, signIn } = useStore();
 
   const [step, setStep] = useState<Step>('role');
-  const [loginError, setLoginError] = useState('');
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -37,7 +36,6 @@ export default function HomePage() {
 
   const go = (s: Step) => {
     setStep(s);
-    setLoginError('');
   };
 
   const handleBackToHome = () => {
@@ -47,84 +45,33 @@ export default function HomePage() {
     }
   };
 
-  const isEmailTaken = (email: string) =>
-    users.some((u) => u.email.toLowerCase() === email.toLowerCase());
-
-  const handleB2CSubmit = (data: { nombre: string; email: string }) => {
-    registerUser({ nombre: data.nombre, email: data.email, rol: 'b2c' });
+  const handleB2CSubmit = async (data: { nombre: string; email: string; password: string }) => {
+    await signUp({ ...data, rol: 'b2c' });
     router.push('/b2c');
   };
 
-  const handleB2BSubmit = (data: {
+  const handleB2BSubmit = async (data: {
     nombre: string;
     email: string;
+    password: string;
     restaurantName: string;
     categoria: string;
     descripcion: string;
     horario: string;
     direccion: string;
   }) => {
-    registerRestaurant(data);
-    router.push('/b2b');
-  };
-
-  const handleLoginSubmit = (email: string) => {
-    let u = users.find((x) => x.email.toLowerCase() === email.toLowerCase());
-    if (!u) {
-      if (email.toLowerCase() === 'marco@trattoria.com') {
-        u = {
-          id: 'user-b2b-1',
-          nombre: 'Chef Marco',
-          email: 'marco@trattoria.com',
-          rol: 'b2b',
-          restaurantes_favoritos: [],
-          createdAt: '2024-01-01T00:00:00Z',
-        };
-      } else if (email.toLowerCase() === 'sofia@demo.com') {
-        u = {
-          id: 'demo-client',
-          nombre: 'Sofía Martínez',
-          email: 'sofia@demo.com',
-          rol: 'b2c',
-          restaurantes_favoritos: ['rest-1', 'rest-3'],
-          createdAt: '2024-01-01T00:00:00Z',
-        };
-      }
-    }
-
-    if (!u) {
-      setLoginError('No encontramos esa cuenta.');
-      return;
-    }
-
-    login(u);
-    router.push(u.rol === 'b2b' ? '/b2b' : '/b2c');
-  };
-
-  const quickDemoB2C = () => {
-    const demo: User = {
-      id: 'demo-client',
-      nombre: 'Sofía Martínez',
-      email: 'sofia@demo.com',
-      rol: 'b2c',
-      restaurantes_favoritos: ['rest-1', 'rest-3'],
-      createdAt: '2024-01-01T00:00:00Z',
-    };
-    login(demo);
-    router.push('/b2c');
-  };
-
-  const quickDemoB2B = () => {
-    const demo: User = {
-      id: 'user-b2b-1',
-      nombre: 'Chef Marco',
-      email: 'marco@trattoria.com',
+    const { restaurantName, categoria, descripcion, horario, direccion, ...account } = data;
+    await signUp({
+      ...account,
       rol: 'b2b',
-      restaurantes_favoritos: [],
-      createdAt: '2024-01-01T00:00:00Z',
-    };
-    login(demo);
+      business: { restaurantName, categoria, descripcion, horario, direccion },
+    });
     router.push('/b2b');
+  };
+
+  const handleLoginSubmit = async (email: string, password: string) => {
+    const user = await signIn(email, password);
+    router.push(user.rol === 'b2b' ? '/b2b' : '/b2c');
   };
 
   return (
@@ -156,12 +103,8 @@ export default function HomePage() {
           {/* Food waste magnitude stats in Mexico & NL */}
           <WasteStatsSection />
 
-          {/* Quick Demo Access Bar & Login link */}
-          <QuickDemoBar
-            onQuickDemoB2C={quickDemoB2C}
-            onQuickDemoB2B={quickDemoB2B}
-            onGoLogin={() => go('login')}
-          />
+          {/* Login link */}
+          <LoginPrompt onGoLogin={() => go('login')} />
         </div>
       )}
 
@@ -169,7 +112,6 @@ export default function HomePage() {
         <B2cRegisterForm
           onBack={handleBackToHome}
           onSubmit={handleB2CSubmit}
-          isEmailTaken={isEmailTaken}
         />
       )}
 
@@ -177,7 +119,6 @@ export default function HomePage() {
         <B2bRegisterForm
           onBack={handleBackToHome}
           onSubmit={handleB2BSubmit}
-          isEmailTaken={isEmailTaken}
         />
       )}
 
@@ -185,7 +126,6 @@ export default function HomePage() {
         <LoginForm
           onBack={handleBackToHome}
           onSubmit={handleLoginSubmit}
-          error={loginError}
         />
       )}
     </div>

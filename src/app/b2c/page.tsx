@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useStore, Package, Restaurant } from '@/store/useStore';
 import { useHydrated } from '@/components/useHydrated';
-import { pilotAnalytics } from '@/lib/pilotAnalytics';
 
 type PkgWithRest = Package & { restaurant: Restaurant };
 
@@ -52,7 +51,7 @@ export default function B2CPage() {
   const [confirmed, setConfirmed] = useState<{ codigo: string; pkg: PkgWithRest } | null>(null);
   const [showOrders, setShowOrders] = useState(false);
   const [notificationDismissed, setNotificationDismissed] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<'mercadopago' | 'efectivo'>('mercadopago');
+  const [orderError, setOrderError] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
 
   const available = useMemo<PkgWithRest[]>(
@@ -132,13 +131,16 @@ export default function B2CPage() {
   const confirm = async () => {
     if (!selected) return;
     setIsProcessing(true);
-    await new Promise((r) => setTimeout(r, 600));
-    const o = createOrder(selected.id);
-    pilotAnalytics.trackConversion(Boolean(selected.foto_vitrina), true);
-    pilotAnalytics.trackSurplusRescued(1.8, 2.5, selected.precio_remate);
-    setConfirmed({ codigo: o.codigo_recoleccion, pkg: selected });
-    setSelected(null);
-    setIsProcessing(false);
+    setOrderError('');
+    try {
+      const o = await createOrder(selected.id);
+      setConfirmed({ codigo: o.codigo_recoleccion, pkg: selected });
+      setSelected(null);
+    } catch (err) {
+      setOrderError(err instanceof Error ? err.message : 'No se pudo completar la reserva.');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   // User impact calculations
@@ -147,7 +149,7 @@ export default function B2CPage() {
     const orig = o.pkg?.precio_original ?? (o.precio_pagado * 2.5);
     return acc + Math.max(0, orig - o.precio_pagado);
   }, 0);
-  const co2AvoidedKg = ((totalSavedOrders + 2) * 2.5).toFixed(1);
+  const co2AvoidedKg = (totalSavedOrders * 2.5).toFixed(1);
 
   return (
     <div className="mx-auto max-w-5xl px-4 pt-6 pb-24">
@@ -203,7 +205,7 @@ export default function B2CPage() {
         <div className="flex items-center gap-3 text-xs">
           <div className="text-right">
             <span className="text-muted block text-[10px] uppercase font-bold">Ahorro total</span>
-            <span className="font-extrabold text-accent text-sm">${totalMoneySaved + 380} MXN</span>
+            <span className="font-extrabold text-accent text-sm">${totalMoneySaved} MXN</span>
           </div>
           <Link
             href="/perfil"
@@ -240,7 +242,6 @@ export default function B2CPage() {
             <button
               onClick={() => {
                 setZona('DistritoTec');
-                pilotAnalytics.trackConversion(true, false);
               }}
               className="btn btn-secondary !py-1 !px-2.5 text-xs font-bold cursor-pointer"
             >
@@ -522,7 +523,7 @@ export default function B2CPage() {
         </section>
       )}
 
-      {/* Reservation Confirmation Modal (Mercado Pago transparent checkout) */}
+      {/* Reservation Confirmation Modal */}
       {selected && (
         <Modal onClose={() => setSelected(null)}>
           <div className="text-center pb-2">
@@ -555,38 +556,9 @@ export default function B2CPage() {
             </div>
           )}
 
-          {/* Payment Method Selector */}
-          <div className="my-4">
-            <span className="text-[11px] font-bold text-muted uppercase tracking-wider block mb-2">
-              Método de pago
-            </span>
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <button
-                type="button"
-                onClick={() => setPaymentMethod('mercadopago')}
-                className={`p-3 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all cursor-pointer ${
-                  paymentMethod === 'mercadopago'
-                    ? 'border-emerald-500 bg-emerald-500/10 text-fg font-bold shadow-xs'
-                    : 'border-line text-muted hover:border-muted'
-                }`}
-              >
-                <span className="text-xs font-black text-sky-600 dark:text-sky-400">Mercado Pago</span>
-                <span className="text-[10px] text-muted">Tarjeta / Saldo MP</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setPaymentMethod('efectivo')}
-                className={`p-3 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all cursor-pointer ${
-                  paymentMethod === 'efectivo'
-                    ? 'border-emerald-500 bg-emerald-500/10 text-fg font-bold shadow-xs'
-                    : 'border-line text-muted hover:border-muted'
-                }`}
-              >
-                <span className="text-xs font-black">💵 Efectivo</span>
-                <span className="text-[10px] text-muted">Paga al recoger</span>
-              </button>
-            </div>
-          </div>
+          <p className="my-4 text-xs text-muted">
+            El pago se hace en efectivo directamente en el local, al recoger tu paquete con tu código.
+          </p>
 
           <div className="my-3 p-4 rounded-xl bg-subtle border border-line space-y-2 text-xs">
             <Row k="Precio regular estimado" v={<span className="line-through text-muted font-mono">${selected.precio_original} MXN</span>} />
@@ -594,14 +566,18 @@ export default function B2CPage() {
             <Row k="Horario de recolección" v={<span className="font-semibold text-fg">Hoy antes de {selected.hora_limite}</span>} />
             <Row k="Punto de entrega" v={<span className="text-fg">{selected.restaurant.direccion}</span>} />
             <div className="border-t border-line pt-2.5 flex justify-between items-baseline font-bold text-sm">
-              <span className="text-fg">Total a pagar:</span>
+              <span className="text-fg">Total a pagar en el local:</span>
               <span className="text-xl font-black text-accent">${selected.precio_remate} MXN</span>
             </div>
           </div>
 
+          {orderError && (
+            <p className="mb-3 text-xs font-medium text-danger bg-danger-soft p-3 rounded-xl">{orderError}</p>
+          )}
+
           <div className="flex gap-3">
             <button
-              onClick={() => setSelected(null)}
+              onClick={() => { setSelected(null); setOrderError(''); }}
               disabled={isProcessing}
               className="btn btn-ghost flex-1 text-xs"
             >
@@ -619,7 +595,7 @@ export default function B2CPage() {
                   Procesando...
                 </>
               ) : (
-                paymentMethod === 'mercadopago' ? 'Pagar y Apartar' : 'Reservar para pagar en tienda'
+                'Reservar y pagar en el local'
               )}
             </button>
           </div>
