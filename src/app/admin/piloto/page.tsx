@@ -103,7 +103,7 @@ export default function PilotDashboardPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Métricas reales del piloto</h1>
           <p className="text-sm text-muted">
-            Solo cuentas registradas en Supabase Auth. Actualizado {new Date(metrics.generatedAt).toLocaleString('es-MX')}.
+            Solo cuentas registradas en Supabase Auth. Actualizado {new Date(metrics.generatedAt).toLocaleString('es-MX')}
           </p>
         </div>
         <button onClick={exportCsv} className="btn btn-ghost text-xs cursor-pointer">Exportar CSV</button>

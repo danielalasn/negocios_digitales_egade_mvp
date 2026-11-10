@@ -4,7 +4,6 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { Navbar } from "@/components/Navbar";
 import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
-import { AiChatbot } from "@/components/AiChatbot";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
@@ -49,7 +48,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <ServiceWorkerRegister />
           <Navbar />
           <main>{children}</main>
-          <AiChatbot />
         </ThemeProvider>
       </body>
     </html>
