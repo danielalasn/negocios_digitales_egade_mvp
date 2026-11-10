@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useStore } from '@/store/useStore';
 import { useHydrated } from '@/components/useHydrated';
 import { RecoveryCalculator } from '@/components/RecoveryCalculator';
@@ -19,20 +19,25 @@ import { LoginForm } from '@/components/landing/LoginForm';
 type Step = 'role' | 'b2c' | 'b2b' | 'login';
 
 export default function HomePage() {
+  return (
+    <Suspense fallback={null}>
+      <HomeContent />
+    </Suspense>
+  );
+}
+
+function HomeContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const hydrated = useHydrated();
   const { currentUser, logout, signUp, signIn } = useStore();
 
   const [step, setStep] = useState<Step>('role');
 
+  // React to /?login=true even when already on the landing page (navbar link).
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const p = new URLSearchParams(window.location.search);
-      if (p.get('login') === 'true') {
-        setStep('login');
-      }
-    }
-  }, []);
+    if (searchParams.get('login') === 'true') setStep('login');
+  }, [searchParams]);
 
   const go = (s: Step) => {
     setStep(s);
