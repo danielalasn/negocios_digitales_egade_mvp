@@ -94,7 +94,6 @@ export function QrScanner({ onCode, onClose }: QrScannerProps) {
       cancelAnimationFrame(raf);
       stream?.getTracks().forEach((t) => t.stop());
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const readImage = (file: File) => {

@@ -1,490 +1,66 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { livePrice } from '@/lib/livePrice';
-import { useNow } from '@/components/useNow';
-import { useStore } from '@/store/useStore';
-import { useHydrated } from '@/components/useHydrated';
-import { VisionUploader } from '@/components/VisionUploader';
-import { QrScanner } from '@/components/b2b/QrScanner';
-import { parsePickupCode } from '@/lib/qrPayload';
-import { CatalogManager } from '@/components/b2b/CatalogManager';
+import { useMerchant } from '@/components/b2b/MerchantContext';
+import { Empty, OrderRow, Stat } from '@/components/b2b/ui';
 
-type Tab = 'paquetes' | 'ordenes' | 'nuevo' | 'catalogo';
-
-const disc = (o: number, r: number) => Math.round(((o - r) / o) * 100);
-
-export default function B2BPage() {
-  const router = useRouter();
-  const hydrated = useHydrated();
-  const now = useNow();
-  const currentUser = useStore((s) => s.currentUser);
-  const restaurants = useStore((s) => s.restaurants);
-  const packages = useStore((s) => s.packages);
-  const orders = useStore((s) => s.orders);
-  const users = useStore((s) => s.users);
-  const createPackage = useStore((s) => s.createPackage);
-  const updateOrderStatus = useStore((s) => s.updateOrderStatus);
-  const deletePackage = useStore((s) => s.deletePackage);
-  const syncFromSupabase = useStore((s) => s.syncFromSupabase);
-
-  const [tab, setTab] = useState<Tab>('paquetes');
-  const [creationMode, setCreationMode] = useState<'vision' | 'manual'>('vision');
-  const [toast, setToast] = useState('');
-  const [forecastApplied, setForecastApplied] = useState(false);
-  const [f, setF] = useState({ titulo: '', desc: '', cantidad: '5', orig: '', rem: '', hora: '22:00' });
-  const [err, setErr] = useState('');
-  const [scannerOpen, setScannerOpen] = useState(false);
-  const [quickCode, setQuickCode] = useState('');
-  const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
-    setF((p) => ({ ...p, [k]: e.target.value }));
-
-  const rest = restaurants.find((r) => r.ownerId === currentUser?.id);
-
-  const myPkgs = useMemo(() => packages.filter((p) => p.restaurant_id === rest?.id), [packages, rest]);
-  const myOrders = useMemo(
-    () =>
-      orders
-        .filter((o) => o.restaurant_id === rest?.id)
-        .map((o) => ({
-          ...o,
-          titulo: packages.find((p) => p.id === o.package_id)?.titulo,
-          cliente: users.find((u) => u.id === o.user_id)?.nombre,
-        }))
-        .reverse(),
-    [orders, packages, users, rest]
-  );
-
-  if (!hydrated) return null;
-
-  if (!currentUser) {
-    return (
-      <div className="mx-auto max-w-md px-4 py-24 text-center">
-        <p className="font-bold text-lg">Inicia sesión para entrar</p>
-        <p className="text-sm text-muted mt-1.5">Esta sección requiere una cuenta de restaurante (B2B).</p>
-        <Link href="/" className="btn btn-primary mt-6 text-xs font-bold inline-flex items-center gap-1.5">
-          Ir a iniciar sesión →
-        </Link>
-      </div>
-    );
-  }
-
-  if (currentUser.rol !== 'b2b') {
-    return (
-      <div className="mx-auto max-w-md px-4 py-24 text-center">
-        <p className="font-bold text-lg">Esta sección es para comercios</p>
-        <p className="text-sm text-muted mt-1.5">Actualmente estás con una cuenta de cliente ({currentUser.nombre}).</p>
-        <div className="mt-6 flex justify-center gap-3">
-          <Link href="/b2c" className="btn btn-primary text-xs font-bold">Ir a compras (B2C)</Link>
-          <Link href="/" className="btn btn-ghost text-xs font-semibold">Cambiar de cuenta</Link>
-        </div>
-      </div>
-    );
-  }
-
-  if (!rest) {
-    return (
-      <div className="mx-auto max-w-md px-4 py-24 text-center">
-        <p className="font-bold text-lg">Sin restaurante asociado</p>
-        <p className="text-sm text-muted mt-1.5">Tu cuenta ({currentUser.email}) no tiene un restaurante registrado.</p>
-        <div className="mt-6 flex justify-center gap-3">
-          <Link href="/" className="btn btn-primary text-xs font-bold">Volver al inicio</Link>
-        </div>
-      </div>
-    );
-  }
-
-  const pending = myOrders.filter((o) => o.estado === 'pendiente').length;
-  const earnings = myOrders.filter((o) => o.estado === 'completada').reduce((a, o) => a + o.precio_pagado, 0);
-  const active = myPkgs.filter((p) => p.disponible).length;
-
-  const flash = (m: string) => { setToast(m); setTimeout(() => setToast(''), 2500); };
-
-  const publish = (e: React.FormEvent) => {
-    e.preventDefault();
-    const o = parseFloat(f.orig), r = parseFloat(f.rem);
-    if (!f.titulo || !o || !r) return setErr('Completa los campos requeridos.');
-    if (r >= o) return setErr('El precio de remate debe ser menor al original.');
-    createPackage({ restaurant_id: rest.id, titulo: f.titulo, descripcion: f.desc, cantidad: parseInt(f.cantidad) || 1, precio_original: o, precio_remate: r, hora_limite: f.hora });
-    setF({ titulo: '', desc: '', cantidad: '5', orig: '', rem: '', hora: '22:00' });
-    setErr(''); setTab('paquetes'); flash('Paquete publicado');
-  };
-
-  const handleVisionPublished = async () => {
-    await syncFromSupabase();
-    setTab('paquetes');
-    flash('Lote confirmado y publicado en el marketplace');
-  };
-
-  const redeemCode = (raw: string) => {
-    const clean = raw.trim().toUpperCase();
-    const formatted = parsePickupCode(raw) ?? (clean.startsWith('#') ? clean : `#${clean}`);
-    const target = myOrders.find((o) => o.codigo_recoleccion === formatted && o.estado === 'pendiente');
-    if (!target) {
-      flash('Código no encontrado o ya entregado');
-      return;
-    }
-    updateOrderStatus(target.id, 'completada');
-    setQuickCode('');
-    flash(`¡Pedido ${formatted} validado y entregado!`);
-  };
-
-  const validateCode = (e: React.FormEvent) => {
-    e.preventDefault();
-    redeemCode(quickCode);
-  };
-
-  const tabs: [Tab, string][] = [
-    ['paquetes', 'Mis paquetes activos'],
-    ['ordenes', `Pedidos por entregar${pending ? ` (${pending})` : ''}`],
-    ['nuevo', '+ Publicar nuevo paquete'],
-    ['catalogo', 'Mi catálogo'],
-  ];
+/** Home: the numbers, the two main actions and the orders waiting to be delivered. */
+export default function B2BHomePage() {
+  const { stats, orders } = useMerchant();
+  const pending = orders.filter((o) => o.estado === 'pendiente');
 
   return (
-    <div className="mx-auto max-w-5xl px-4 pt-6 pb-24">
-      {/* Restaurant Header */}
-      <div className="card p-6 border-line bg-gradient-to-r from-surface via-subtle to-surface flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div className="w-16 h-16 rounded-2xl bg-accent-soft text-accent border border-accent/20 flex items-center justify-center text-3xl shadow-xs shrink-0">
-            {rest.logo || '🍽️'}
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-black tracking-tight">{rest.nombre}</h1>
-              <span className="badge badge-eco text-[10px] flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                Activo
-              </span>
-            </div>
-            <p className="text-xs text-muted mt-1 flex flex-wrap items-center gap-2">
-              <span>{rest.categoria}</span>
-              <span>·</span>
-              <span>{rest.direccion}</span>
-              <span>·</span>
-              <span>{rest.horario}</span>
-            </p>
-          </div>
-        </div>
+    <div className="space-y-8">
+      <section className="grid grid-cols-2 lg:grid-cols-4 gap-3" aria-label="Indicadores">
+        <Stat label="Lotes activos" value={stats.activeLots} />
+        <Stat label="Pedidos pendientes" value={stats.pendingOrders} />
+        <Stat label="Ingresos recuperados" value={`$${stats.recoveredRevenue}`} hint="Pedidos entregados" />
+        <Stat label="Piezas rescatadas" value={stats.rescuedPieces} hint={`${stats.deliveredOrders} pedidos entregados`} />
+      </section>
 
-        <Link
-          href={`/restaurante/${rest.id}`}
-          className="btn btn-ghost text-xs !py-2 !px-3 font-semibold shrink-0"
-        >
-          Ver perfil público →
+      <section className="grid sm:grid-cols-2 gap-3" aria-label="Acciones principales">
+        <Link href="/b2b/canjear" className="card card-interactive p-5 flex items-center gap-4">
+          <span className="w-11 h-11 rounded-xl bg-accent text-accent-fg flex items-center justify-center shrink-0">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 12h10" />
+            </svg>
+          </span>
+          <span>
+            <span className="block font-semibold">Canjear pedido</span>
+            <span className="block text-sm text-muted">Escanea el QR del cliente o escribe su código.</span>
+          </span>
         </Link>
-      </div>
-
-      {/* Stats row */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6">
-        <Stat label="Paquetes activos" value={active} color="text-accent" />
-        <Stat label="Pedidos pendientes" value={pending} color={pending > 0 ? "text-amber-500 font-black animate-pulse" : "text-fg"} />
-        <Stat label="Ingresos recuperados" value={`$${earnings}`} color="text-emerald-600" />
-        <Stat label="Merma evitada" value={`${(myOrders.length * 1.8 + 8).toFixed(0)} kg`} color="text-teal-600" />
-      </div>
-
-      {scannerOpen && (
-        <QrScanner
-          onClose={() => setScannerOpen(false)}
-          onCode={(code) => {
-            setScannerOpen(false);
-            redeemCode(code);
-          }}
-        />
-      )}
-
-      {/* Quick redemption code input box */}
-      <div className="mt-6 card p-4 bg-accent-soft/30 border border-accent/20 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-accent/10 text-accent flex items-center justify-center shrink-0">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="7" x2="17" y1="12" y2="12"/></svg>
-          </div>
-          <div>
-            <p className="text-xs font-bold text-fg">Canje rápido en mostrador</p>
-            <p className="text-[11px] text-muted">Ingresa el código que te muestra el cliente para marcarlo como entregado.</p>
-          </div>
-        </div>
-        <form onSubmit={validateCode} className="flex gap-2 shrink-0">
-          <input
-            id="quick-redeem-input"
-            type="text"
-            placeholder="#A1B2"
-            value={quickCode}
-            onChange={(e) => setQuickCode(e.target.value)}
-            className="input !py-1.5 !px-3 text-xs font-mono font-bold w-28 uppercase text-center"
-          />
-          <button type="submit" className="btn btn-primary !py-1.5 !px-3.5 text-xs font-bold shrink-0">
-            Validar
-          </button>
-          <button type="button" onClick={() => setScannerOpen(true)} className="btn btn-ghost !py-1.5 !px-3.5 text-xs font-bold shrink-0 cursor-pointer">
-            Escanear QR
-          </button>
-        </form>
-      </div>
-
-      {/* AI Production Forecast for Tomorrow (AI Flywheel - Slide 3 & 5) */}
-      <div className="mt-6 card p-5 border-emerald-500/25 bg-gradient-to-br from-emerald-500/5 via-surface to-teal-500/5 shadow-xs">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-line/60">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 text-base font-bold">
-              📈
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-xs font-bold text-fg">Pronóstico IA de Producción para Mañana</h2>
-                <span className="badge badge-eco text-[10px] font-bold">AI Flywheel</span>
-              </div>
-              <p className="text-[11px] text-muted">
-                Cada foto al cierre alimenta el modelo predictivo. La IA sugiere; tú decides la producción final.
-              </p>
-            </div>
-          </div>
-          <span className="text-[10px] text-muted font-medium bg-subtle px-2 py-1 rounded-md shrink-0">
-            18 fotos históricas analizadas
+        <Link href="/b2b/publicar" className="card card-interactive p-5 flex items-center gap-4">
+          <span className="w-11 h-11 rounded-xl bg-subtle border border-line text-fg flex items-center justify-center shrink-0">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M4 8h3l2-3h6l2 3h3v12H4z" />
+              <circle cx="12" cy="13" r="3.5" />
+            </svg>
           </span>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
-          <div className="p-3 rounded-xl bg-surface/80 border border-line">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-muted block">Patrón Detectado</span>
-            <span className="text-xs font-black text-amber-500 block mt-1">Excedente recurrente (+18%)</span>
-            <span className="text-[11px] text-muted block mt-0.5">Bollería dulce y conchas suelen quedar al cierre.</span>
-          </div>
-
-          <div className="p-3 rounded-xl bg-surface/80 border border-line">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-muted block">Sugerencia IA para Mañana</span>
-            <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 block mt-1">Reducir 1ª tanda -12%</span>
-            <span className="text-[11px] text-muted block mt-0.5">Hornear 4-6 piezas menos al abrir para evitar merma.</span>
-          </div>
-
-          <div className="p-3 rounded-xl bg-surface/80 border border-line">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-muted block">Ahorro en Materia Prima</span>
-            <span className="text-xs font-black text-fg block mt-1">~$190 - $240 MXN</span>
-            <span className="text-[11px] text-muted block mt-0.5">Dinero no tirado a la basura desde la mañana.</span>
-          </div>
-        </div>
-
-        <div className="mt-4 pt-3 border-t border-line/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-[11px]">
-          <span className="text-muted">
-            {forecastApplied
-              ? '✓ Sugerencia adoptada en la orden de producción de cocina.'
-              : '¿Deseas registrar este ajuste en la orden de producción de mañana?'}
+          <span>
+            <span className="block font-semibold">Publicar el cierre del día</span>
+            <span className="block text-sm text-muted">Una foto de tu vitrina y la IA propone el lote.</span>
           </span>
-          <button
-            onClick={() => {
-              setForecastApplied(!forecastApplied);
-              flash(forecastApplied ? 'Ajuste desmarcado' : '¡Ajuste de producción registrado para mañana!');
-            }}
-            className={`btn !py-1 !px-3 text-xs font-bold cursor-pointer shrink-0 ${
-              forecastApplied ? 'btn-ghost text-muted' : 'btn-primary'
-            }`}
-          >
-            {forecastApplied ? 'Deshacer ajuste' : 'Aplicar ajuste a cocina →'}
-          </button>
+        </Link>
+      </section>
+
+      <section aria-label="Pedidos pendientes">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-semibold">Por entregar</h2>
+          <Link href="/b2b/pedidos" className="text-xs font-semibold text-accent hover:underline">
+            Ver todos los pedidos
+          </Link>
         </div>
-      </div>
-
-      <div className="mt-8 flex gap-2 border-b border-line pb-1 overflow-x-auto no-scrollbar">
-        {tabs.map(([id, label]) => (
-          <button
-            key={id}
-            id={`tab-${id}`}
-            onClick={() => setTab(id)}
-            className={`px-4 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
-              tab === id
-                ? 'bg-accent text-accent-fg shadow-xs'
-                : 'text-muted hover:text-fg hover:bg-subtle'
-            }`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-
-      <div className="mt-6">
-        {tab === 'paquetes' &&
-          (myPkgs.length === 0 ? (
-            <Empty title="Aún no publicas paquetes" sub="Publica tu primer paquete de comida.">
-              <button onClick={() => setTab('nuevo')} className="btn btn-primary mt-5">Publicar paquete</button>
-            </Empty>
-          ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {myPkgs.map((p) => {
-                const sold = p.cantidad - p.cantidad_disponible;
-                const lp = livePrice(p, now);
-                return (
-                  <article key={p.id} className="card fade-in p-5 overflow-hidden flex flex-col justify-between">
-                    <div>
-                      {p.foto_vitrina && (
-                        <div className="relative h-36 -mx-5 -mt-5 mb-4 overflow-hidden border-b border-line bg-black">
-                          <img src={p.foto_vitrina} alt={p.titulo} className="w-full h-full object-cover" />
-                          {p.aprobado_sin_edicion && (
-                            <span className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-black/70 backdrop-blur-md text-[10px] font-bold text-emerald-400 border border-emerald-500/30">
-                              ⚡ Publicado con IA (1-clic)
-                            </span>
-                          )}
-                        </div>
-                      )}
-                      <div className="flex justify-between gap-2">
-                        <h3 className="font-bold leading-snug">{p.titulo}</h3>
-                        <span className={`text-xs font-bold ${p.disponible ? 'text-accent' : 'text-danger'}`}>{p.disponible ? 'Activa' : 'Agotada'}</span>
-                      </div>
-                      <p className="text-xs text-muted mt-1 clamp-2 min-h-8">{p.descripcion || 'Sin descripción'}</p>
-
-                      {p.items_detectados && p.items_detectados.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-2.5">
-                          {p.items_detectados.map((it, idx) => (
-                            <span key={idx} className="text-[10px] bg-subtle px-1.5 py-0.5 rounded text-muted font-medium border border-line/60">
-                              {it.cantidad}x {it.nombre}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-
-                      <div className="mt-4 flex items-baseline gap-2">
-                        <span className="text-xl font-black text-fg">${lp.price}</span>
-                        <span className="text-sm text-muted line-through">${lp.original}</span>
-                        <span className="text-xs text-accent font-bold">-{lp.pct}%</span>
-                      </div>
-                    </div>
-
-                    <div className="mt-4 pt-3 border-t border-line/50">
-                      <div className="flex justify-between text-xs text-muted mb-1.5">
-                        <span>Vendidas {sold}/{p.cantidad}</span><span>Hasta {p.hora_limite}</span>
-                      </div>
-                      <div className="h-1 rounded-full bg-subtle overflow-hidden">
-                        <div className="h-full bg-accent" style={{ width: `${p.cantidad ? (sold / p.cantidad) * 100 : 0}%` }} />
-                      </div>
-                      <button id={`delete-pkg-${p.id}`} onClick={() => deletePackage(p.id)} className="mt-3 text-xs text-muted hover:text-danger transition-colors cursor-pointer">
-                        Eliminar
-                      </button>
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
-          ))}
-
-        {tab === 'ordenes' &&
-          (myOrders.length === 0 ? (
-            <Empty title="Sin pedidos todavía" sub="Los pedidos de tus clientes aparecerán aquí." />
-          ) : (
-            <ul className="space-y-3">
-              {myOrders.map((o) => (
-                <li key={o.id} className="card fade-in p-4 flex items-center gap-4">
-                  <span className="font-mono text-lg font-semibold tracking-widest px-3 py-2 rounded-lg bg-subtle border border-line">{o.codigo_recoleccion}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate">{o.titulo ?? 'Paquete eliminado'}</p>
-                    <p className="text-xs text-muted">
-                      {o.cliente ?? 'Cliente'} · {new Date(o.createdAt).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })} · ${o.precio_pagado}
-                    </p>
-                  </div>
-                  {o.estado === 'pendiente' ? (
-                    <div className="text-right shrink-0">
-                      <span className="text-xs font-semibold text-muted block">Pendiente de entrega</span>
-                      <button
-                        id={`redeem-order-${o.id}`}
-                        type="button"
-                        onClick={() => {
-                          const input = document.getElementById('quick-redeem-input') as HTMLInputElement | null;
-                          window.scrollTo({ top: 0, behavior: 'smooth' });
-                          input?.focus();
-                          flash('Pide al cliente su código o QR para entregar el pedido');
-                        }}
-                        className="mt-1 text-xs font-semibold text-accent hover:underline cursor-pointer"
-                      >
-                        Validar con código o QR
-                      </button>
-                    </div>
-                  ) : (
-                    <span className={`text-xs ${o.estado === 'completada' ? 'text-accent' : 'text-danger'}`}>{o.estado}</span>
-                  )}
-                </li>
-              ))}
-            </ul>
-          ))}
-
-        {tab === 'catalogo' && rest && <CatalogManager merchantId={rest.id} />}
-
-        {tab === 'nuevo' && (
-          <div className={`mx-auto space-y-4 transition-all duration-200 ${creationMode === 'vision' ? 'max-w-3xl' : 'max-w-xl'}`}>
-            <div className="flex p-1 bg-subtle rounded-xl border border-line">
-              <button
-                type="button"
-                onClick={() => setCreationMode('vision')}
-                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                  creationMode === 'vision'
-                    ? 'bg-emerald-600 text-white shadow-xs'
-                    : 'text-muted hover:text-fg'
-                }`}
-              >
-                <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                Foto con IA (Recomendado 1-Clic)
-              </button>
-              <button
-                type="button"
-                onClick={() => setCreationMode('manual')}
-                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                  creationMode === 'manual'
-                    ? 'bg-surface text-fg shadow-xs border border-line'
-                    : 'text-muted hover:text-fg'
-                }`}
-              >
-                Formulario Manual
-              </button>
-            </div>
-
-            {creationMode === 'vision' ? (
-              <VisionUploader
-                onPublished={handleVisionPublished}
-                onCancel={() => setCreationMode('manual')}
-              />
-            ) : (
-              <form onSubmit={publish} className="card fade-in p-6 space-y-4">
-                <div>
-                  <h2 className="text-lg font-semibold">Nuevo paquete de comida</h2>
-                  <p className="text-sm text-muted">Publica tus excedentes del día de forma manual.</p>
-                </div>
-                <div><label className="label">Título</label><input id="pkg-titulo" className="input" placeholder="Paquete italiano mixto" value={f.titulo} onChange={set('titulo')} /></div>
-                <div><label className="label">Descripción</label><textarea id="pkg-desc" rows={2} className="input" placeholder="¿Qué puede incluir?" value={f.desc} onChange={set('desc')} /></div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div><label className="label">Cantidad</label><input id="pkg-cantidad" type="number" min="1" className="input" value={f.cantidad} onChange={set('cantidad')} /></div>
-                  <div><label className="label">Hora límite</label><input id="pkg-hora" type="time" className="input" value={f.hora} onChange={set('hora')} /></div>
-                  <div><label className="label">Precio original</label><input id="pkg-precio-orig" type="number" min="1" className="input" placeholder="350" value={f.orig} onChange={set('orig')} /></div>
-                  <div><label className="label">Precio de remate</label><input id="pkg-precio-remate" type="number" min="1" className="input" placeholder="99" value={f.rem} onChange={set('rem')} /></div>
-                </div>
-                {err && <p className="text-sm text-danger">{err}</p>}
-                <button id="publish-pkg" className="btn btn-primary w-full">Publicar paquete</button>
-              </form>
-            )}
-          </div>
+        {pending.length === 0 ? (
+          <Empty title="No hay pedidos pendientes" sub="Cuando un cliente reserve uno de tus lotes aparecerá aquí." />
+        ) : (
+          <ul className="space-y-3">
+            {pending.slice(0, 5).map((o) => (
+              <OrderRow key={o.id} order={o} />
+            ))}
+          </ul>
         )}
-      </div>
-
-      {toast && (
-        <div className="fade-in fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-lg bg-fg text-bg text-sm shadow-lg">{toast}</div>
-      )}
-    </div>
-  );
-}
-
-function Stat({ label, value, color }: { label: string; value: React.ReactNode; color?: string }) {
-  return (
-    <div className="card p-4 flex flex-col justify-between">
-      <span className="text-xs font-semibold text-muted">{label}</span>
-      <p className={`text-2xl font-black mt-2 ${color || 'text-fg'}`}>{value}</p>
-    </div>
-  );
-}
-
-function Empty({ title, sub, children }: { title: string; sub: string; children?: React.ReactNode }) {
-  return (
-    <div className="card p-14 text-center">
-      <p className="font-medium">{title}</p>
-      <p className="text-sm text-muted mt-1">{sub}</p>
-      {children}
+      </section>
     </div>
   );
 }
