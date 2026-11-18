@@ -382,9 +382,22 @@ export default function B2BPage() {
                     </p>
                   </div>
                   {o.estado === 'pendiente' ? (
-                    <button id={`complete-order-${o.id}`} onClick={() => { updateOrderStatus(o.id, 'completada'); flash('Pedido completado'); }} className="btn btn-primary !py-1.5">
-                      Completada
-                    </button>
+                    <div className="text-right shrink-0">
+                      <span className="text-xs font-semibold text-muted block">Pendiente de entrega</span>
+                      <button
+                        id={`redeem-order-${o.id}`}
+                        type="button"
+                        onClick={() => {
+                          const input = document.getElementById('quick-redeem-input') as HTMLInputElement | null;
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                          input?.focus();
+                          flash('Pide al cliente su código o QR para entregar el pedido');
+                        }}
+                        className="mt-1 text-xs font-semibold text-accent hover:underline cursor-pointer"
+                      >
+                        Validar con código o QR
+                      </button>
+                    </div>
                   ) : (
                     <span className={`text-xs ${o.estado === 'completada' ? 'text-accent' : 'text-danger'}`}>{o.estado}</span>
                   )}
