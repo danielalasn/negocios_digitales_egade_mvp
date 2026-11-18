@@ -5,10 +5,6 @@ export function HeroSection() {
     <div className="space-y-6">
       {/* Hero Header */}
       <div className="text-center max-w-2xl mx-auto">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 mb-4">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-          Plataforma AI-Native · Monterrey, N.L.
-        </div>
 
         <h1 className="text-4xl sm:text-6xl font-black tracking-tight leading-[1.08] text-balance">
           Lo que sobra hoy,<br />
