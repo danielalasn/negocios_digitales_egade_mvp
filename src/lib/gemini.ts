@@ -152,11 +152,23 @@ export function isQuotaError(err: unknown): boolean {
   return t.includes('RESOURCE_EXHAUSTED') || t.includes('"code":429');
 }
 
+/** True when the call was aborted by our own timeout. */
+export function isTimeoutError(err: unknown): boolean {
+  const name = err instanceof Error ? err.name : '';
+  const t = errorText(err).toLowerCase();
+  return name === 'TimeoutError' || name === 'AbortError' || t.includes('aborted') || t.includes('timed out');
+}
+
 /** True when the model is temporarily overloaded (HTTP 503). */
 export function isOverloadedError(err: unknown): boolean {
   const t = errorText(err);
   return t.includes('UNAVAILABLE') || t.includes('"code":503');
 }
+
+// Hard limits so an analysis can never hang (Vercel functions are capped around 60 s).
+const VISION_CALL_TIMEOUT_MS = 22000;
+const VISION_DEADLINE_MS = 50000;
+const ADVICE_CALL_TIMEOUT_MS = 12000;
 
 const SHEET_COLUMNS = 4;
 const SHEET_TILE = 256;
@@ -311,10 +323,26 @@ export async function analyzePhotoWithGemini(
   });
   contents.push({ inlineData: { data: cleanBase64, mimeType } });
 
-  // Retry policy: quota errors (429) are never retried; overload (503) is retried with growing waits;
-  // validation/parse errors get one quick retry.
+  // Retry policy with hard time limits so the request can never hang:
+  // - every call has a timeout and the whole analysis has a deadline;
+  // - quota (429) marks that model as exhausted and moves to the next one;
+  // - overload (503) or a timeout moves to the next model right away (no long waits);
+  // - a malformed answer gets one retry on the same model.
+  const exhausted = new Set<string>();
   let lastError: Error | null = null;
-  for (let attempt = 1; attempt <= 3; attempt++) {
+  let attempts = 0;
+  let parseRetried = false;
+
+  while (attempts < chain.length * 2) {
+    const remainingMs = VISION_DEADLINE_MS - (Date.now() - startedAt);
+    if (remainingMs < 4000) break;
+    modelName = chain[modelIdx % chain.length];
+    if (exhausted.has(modelName)) {
+      modelIdx++;
+      if (exhausted.size >= chain.length) break;
+      continue;
+    }
+    attempts++;
     try {
       const response = await ai.models.generateContent({
         model: modelName,
@@ -324,6 +352,7 @@ export async function analyzePhotoWithGemini(
           responseMimeType: 'application/json',
           responseSchema: visionResponseSchema,
           thinkingConfig: thinkingConfigFor(modelName),
+          abortSignal: AbortSignal.timeout(Math.min(VISION_CALL_TIMEOUT_MS, remainingMs)),
         },
       });
 
@@ -335,29 +364,26 @@ export async function analyzePhotoWithGemini(
         result: validated,
         meta: {
           model: modelName,
-          attempts: attempt,
+          attempts,
           latencyMs: Date.now() - startedAt,
           promptTokens: response.usageMetadata?.promptTokenCount ?? null,
           outputTokens: response.usageMetadata?.candidatesTokenCount ?? null,
         },
       };
     } catch (err: any) {
-      console.warn(`[Gemini Vision] Intento ${attempt} fallido:`, err.message || err);
+      console.warn(`[Gemini Vision] ${modelName} attempt ${attempts} failed:`, err.message || err);
       lastError = err;
       if (isQuotaError(err)) {
-        // Out of quota on this model: move to the next model without consuming an attempt.
-        if (modelIdx + 1 < chain.length) {
-          modelIdx++;
-          modelName = chain[modelIdx];
-          console.warn(`[Gemini Vision] quota exhausted, switching to ${modelName}`);
-          attempt--;
-          continue;
-        }
+        exhausted.add(modelName);
+        modelIdx++;
+      } else if (isOverloadedError(err) || isTimeoutError(err)) {
+        modelIdx++;
+      } else if (!parseRetried) {
+        parseRetried = true;
+        await new Promise((r) => setTimeout(r, 400));
+      } else {
         break;
       }
-      const overloaded = isOverloadedError(err);
-      if (!overloaded && attempt >= 2) break;
-      if (attempt < 3) await new Promise((r) => setTimeout(r, overloaded ? 3000 * attempt : 600));
     }
   }
 
@@ -455,6 +481,7 @@ export async function advisePricing(
       responseMimeType: 'application/json',
       responseSchema: pricingAdviceSchema,
       thinkingConfig: thinkingConfigFor(model),
+      abortSignal: AbortSignal.timeout(ADVICE_CALL_TIMEOUT_MS),
     },
   });
 
@@ -469,7 +496,7 @@ export async function advisePricing(
       break;
     } catch (err) {
       lastErr = err;
-      if (!isQuotaError(err) && !isOverloadedError(err)) break;
+      if (!isQuotaError(err) && !isOverloadedError(err) && !isTimeoutError(err)) break;
     }
   }
   if (!response) throw lastErr instanceof Error ? lastErr : new Error('Pricing advice failed');

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { analyzePhotoWithGemini, isQuotaError, CatalogProduct } from '@/lib/gemini';
+import { analyzePhotoWithGemini, isOverloadedError, isQuotaError, isTimeoutError, CatalogProduct } from '@/lib/gemini';
 import { closingInstantToday, floorPriceCents, unitPriceCentsAt } from '@/lib/pricing';
 
 // Matches below this confidence are treated as not recognized.
@@ -8,6 +8,9 @@ import { pool, requireMerchant, errorResponse } from '@/lib/serverAuth';
 
 // Real Gemini analysis only. There is no simulated or fallback result: if the model is
 // unavailable the merchant gets an explicit error and can retry or build the basket by hand.
+
+// Hard cap so the function never hangs; the Gemini calls inside have their own shorter timeouts.
+export const maxDuration = 60;
 
 export async function POST(req: Request) {
   try {
@@ -74,6 +77,16 @@ export async function POST(req: Request) {
             user_message: 'Se alcanzó el límite de uso de la IA por ahora. Intenta de nuevo en unos minutos.',
           },
           { status: 429 }
+        );
+      }
+      if (isTimeoutError(geminiError) || isOverloadedError(geminiError)) {
+        return NextResponse.json(
+          {
+            success: false,
+            error_code: 'GEMINI_BUSY',
+            user_message: 'La IA está saturada o tardó demasiado en responder. Intenta de nuevo en un minuto.',
+          },
+          { status: 503 }
         );
       }
       return NextResponse.json(

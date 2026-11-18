@@ -20,6 +20,9 @@ interface ValidationErrorData {
   rejected: boolean;
 }
 
+// The server gives up after 60 s; the client waits a little longer and then shows an error.
+const ANALYSIS_TIMEOUT_MS = 70000;
+
 interface VisionUploaderProps {
   /** Called after the basket was confirmed and stored in the database. */
   onPublished: () => void | Promise<void>;
@@ -32,6 +35,7 @@ export function VisionUploader({ onPublished, onCancel }: VisionUploaderProps) {
   const [basket, setBasket] = useState<VisionBasketData | null>(null);
   const [error, setError] = useState<ValidationErrorData | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   const reset = () => {
     setSelectedImage(null);
@@ -58,8 +62,16 @@ export function VisionUploader({ onPublished, onCancel }: VisionUploaderProps) {
 
   const runVisionAnalysis = async (imageUrl: string) => {
     setAnalyzing(true);
+    const controller = new AbortController();
+    abortRef.current = controller;
+    let timedOut = false;
+    const timer = setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, ANALYSIS_TIMEOUT_MS);
     try {
       const res = await fetch('/api/vision', {
+        signal: controller.signal,
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
         body: JSON.stringify({ imageUrl }),
@@ -76,12 +88,19 @@ export function VisionUploader({ onPublished, onCancel }: VisionUploaderProps) {
         });
       }
     } catch (err) {
+      if (controller.signal.aborted && !timedOut) {
+        // Cancelled by the user: no error message.
+        return;
+      }
       console.error('[VisionUploader] Error de comunicación:', err);
       setError({
-        message: 'No pudimos contactar al servicio de análisis. Revisa tu conexión e intenta de nuevo.',
+        message: timedOut
+          ? 'El análisis tardó demasiado. Intenta de nuevo; si se repite, usa una foto más pequeña o publica de forma manual.'
+          : 'No pudimos contactar al servicio de análisis. Revisa tu conexión e intenta de nuevo.',
         rejected: false,
       });
     } finally {
+      clearTimeout(timer);
       setAnalyzing(false);
     }
   };
@@ -144,6 +163,13 @@ export function VisionUploader({ onPublished, onCancel }: VisionUploaderProps) {
               <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center p-4">
                 <div className="w-12 h-12 rounded-full border-4 border-emerald-400 border-t-transparent animate-spin mb-3" />
                 <p className="text-sm font-bold text-white">Comparando tu vitrina contra el catálogo...</p>
+                <button
+                  type="button"
+                  onClick={() => abortRef.current?.abort()}
+                  className="mt-3 px-3 py-1.5 rounded-lg bg-white/15 hover:bg-white/25 text-white text-xs font-semibold cursor-pointer"
+                >
+                  Cancelar
+                </button>
               </div>
             )}
 

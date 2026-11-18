@@ -3,6 +3,9 @@ import { pool, requireMerchant, errorResponse } from '@/lib/serverAuth';
 import { advisePricing, type PricingAdvice } from '@/lib/gemini';
 import { clampUrgency, closingInstantToday, unitPriceCentsAt } from '@/lib/pricing';
 
+// Hard cap so the function never hangs; the Gemini calls inside have their own shorter timeouts.
+export const maxDuration = 60;
+
 export async function POST(req: Request) {
   try {
     const session = await requireMerchant(req);
