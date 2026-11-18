@@ -8,6 +8,8 @@ import { useNow } from '@/components/useNow';
 import { useStore } from '@/store/useStore';
 import { useHydrated } from '@/components/useHydrated';
 import { VisionUploader } from '@/components/VisionUploader';
+import { QrScanner } from '@/components/b2b/QrScanner';
+import { parsePickupCode } from '@/lib/qrPayload';
 import { CatalogManager } from '@/components/b2b/CatalogManager';
 
 type Tab = 'paquetes' | 'ordenes' | 'nuevo' | 'catalogo';
@@ -34,6 +36,7 @@ export default function B2BPage() {
   const [forecastApplied, setForecastApplied] = useState(false);
   const [f, setF] = useState({ titulo: '', desc: '', cantidad: '5', orig: '', rem: '', hora: '22:00' });
   const [err, setErr] = useState('');
+  const [scannerOpen, setScannerOpen] = useState(false);
   const [quickCode, setQuickCode] = useState('');
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setF((p) => ({ ...p, [k]: e.target.value }));
@@ -115,10 +118,9 @@ export default function B2BPage() {
     flash('Lote confirmado y publicado en el marketplace');
   };
 
-  const validateCode = (e: React.FormEvent) => {
-    e.preventDefault();
-    const clean = quickCode.trim().toUpperCase();
-    const formatted = clean.startsWith('#') ? clean : `#${clean}`;
+  const redeemCode = (raw: string) => {
+    const clean = raw.trim().toUpperCase();
+    const formatted = parsePickupCode(raw) ?? (clean.startsWith('#') ? clean : `#${clean}`);
     const target = myOrders.find((o) => o.codigo_recoleccion === formatted && o.estado === 'pendiente');
     if (!target) {
       flash('Código no encontrado o ya entregado');
@@ -127,6 +129,11 @@ export default function B2BPage() {
     updateOrderStatus(target.id, 'completada');
     setQuickCode('');
     flash(`¡Pedido ${formatted} validado y entregado!`);
+  };
+
+  const validateCode = (e: React.FormEvent) => {
+    e.preventDefault();
+    redeemCode(quickCode);
   };
 
   const tabs: [Tab, string][] = [
@@ -178,6 +185,16 @@ export default function B2BPage() {
         <Stat label="Merma evitada" value={`${(myOrders.length * 1.8 + 8).toFixed(0)} kg`} color="text-teal-600" />
       </div>
 
+      {scannerOpen && (
+        <QrScanner
+          onClose={() => setScannerOpen(false)}
+          onCode={(code) => {
+            setScannerOpen(false);
+            redeemCode(code);
+          }}
+        />
+      )}
+
       {/* Quick redemption code input box */}
       <div className="mt-6 card p-4 bg-accent-soft/30 border border-accent/20 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
@@ -200,6 +217,9 @@ export default function B2BPage() {
           />
           <button type="submit" className="btn btn-primary !py-1.5 !px-3.5 text-xs font-bold shrink-0">
             Validar
+          </button>
+          <button type="button" onClick={() => setScannerOpen(true)} className="btn btn-ghost !py-1.5 !px-3.5 text-xs font-bold shrink-0 cursor-pointer">
+            Escanear QR
           </button>
         </form>
       </div>

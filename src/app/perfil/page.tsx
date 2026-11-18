@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { QrCode } from '@/components/QrCode';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useStore } from '@/store/useStore';
@@ -343,7 +344,7 @@ export default function ConsumerProfilePage() {
             <p className="text-xs text-muted mt-0.5">{selectedTicket.titulo}</p>
 
             <div className="my-4 p-4 rounded-2xl bg-subtle border border-dashed border-accent/40 text-center">
-              <QrCodeVisual value={selectedTicket.codigo} />
+              <QrCode code={selectedTicket.codigo} />
               <p className="text-[11px] font-bold text-muted uppercase tracking-wider mt-2 mb-0.5">
                 Código para canje en mostrador
               </p>
@@ -377,37 +378,6 @@ export default function ConsumerProfilePage() {
           <span>{toast}</span>
         </div>
       )}
-    </div>
-  );
-}
-
-function QrCodeVisual({ value }: { value: string }) {
-  return (
-    <div className="w-32 h-32 mx-auto my-3 p-2 bg-white rounded-xl shadow-xs border border-line flex items-center justify-center">
-      <svg viewBox="0 0 100 100" className="w-full h-full text-zinc-900" fill="currentColor">
-        <rect x="8" y="8" width="26" height="26" fill="none" stroke="currentColor" strokeWidth="4" rx="2" />
-        <rect x="15" y="15" width="12" height="12" rx="1" />
-        <rect x="66" y="8" width="26" height="26" fill="none" stroke="currentColor" strokeWidth="4" rx="2" />
-        <rect x="73" y="15" width="12" height="12" rx="1" />
-        <rect x="8" y="66" width="26" height="26" fill="none" stroke="currentColor" strokeWidth="4" rx="2" />
-        <rect x="15" y="73" width="12" height="12" rx="1" />
-        <rect x="42" y="10" width="6" height="6" />
-        <rect x="52" y="10" width="6" height="6" />
-        <rect x="42" y="22" width="6" height="6" />
-        <rect x="52" y="22" width="6" height="6" />
-        <rect x="10" y="42" width="6" height="6" />
-        <rect x="22" y="42" width="6" height="6" />
-        <rect x="40" y="40" width="8" height="8" />
-        <rect x="56" y="42" width="6" height="6" />
-        <rect x="72" y="42" width="6" height="6" />
-        <rect x="84" y="42" width="6" height="6" />
-        <rect x="42" y="56" width="6" height="6" />
-        <rect x="54" y="56" width="6" height="6" />
-        <rect x="42" y="72" width="6" height="6" />
-        <rect x="54" y="72" width="8" height="8" />
-        <rect x="72" y="72" width="6" height="6" />
-        <rect x="84" y="84" width="6" height="6" />
-      </svg>
     </div>
   );
 }
