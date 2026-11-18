@@ -93,7 +93,7 @@ export default function RestaurantProfilePage() {
 
         <h2 className="text-base font-bold text-fg mt-10 mb-4 flex items-center gap-2">
           <span>Paquetes Disponibles</span>
-          <span className="text-xs font-normal text-muted">({items.length})</span>
+          <span className="text-xs font-normal text-muted">({items.filter((p) => p.disponible && p.cantidad_disponible > 0).length})</span>
         </h2>
 
         {items.length === 0 ? (

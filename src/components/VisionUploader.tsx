@@ -245,7 +245,7 @@ export function VisionUploader({ onPublished, onCancel }: VisionUploaderProps) {
                   reset();
                   await onPublished();
                 } else {
-                  alert(json.user_message || json.message || 'Error al confirmar la canasta');
+                  throw new Error(json.user_message || json.message || 'Error al confirmar la canasta');
                 }
               }}
               onCancel={reset}

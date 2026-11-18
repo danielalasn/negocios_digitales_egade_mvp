@@ -62,6 +62,7 @@ export function BasketReview({
   const [editingItemIdx, setEditingItemIdx] = useState<number | null>(null);
   const [horaLimite, setHoraLimite] = useState(closingTime);
   const [isPublishing, setIsPublishing] = useState(false);
+  const [publishError, setPublishError] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
 
   // Dynamic price preview: recomputed from the chosen closing time. The server recomputes on publish.
@@ -145,6 +146,7 @@ export function BasketReview({
   const handleConfirm = async () => {
     if (items.length === 0) return;
     setIsPublishing(true);
+    setPublishError('');
     try {
       await onConfirmPublish({
         items,
@@ -152,6 +154,8 @@ export function BasketReview({
         sourcePhotoRef: sourcePhoto,
         hadRemovals: items.filter((i) => i.source === 'ai').length < initialItems.length,
       });
+    } catch (err) {
+      setPublishError(err instanceof Error ? err.message : 'No se pudo publicar el lote.');
     } finally {
       setIsPublishing(false);
     }
@@ -217,7 +221,7 @@ export function BasketReview({
                 key={`${item.productId}-${idx}`}
                 className="p-3.5 sm:p-4 rounded-xl bg-subtle border border-line flex flex-col gap-3 text-xs"
               >
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
                   {/* Miniatura y nombre */}
                   <div className="flex items-center gap-3 min-w-0 flex-1">
                     <img
@@ -241,7 +245,7 @@ export function BasketReview({
                   </div>
 
                   {/* Controles: Cantidad, Precios y Acciones agrupados limpiamente */}
-                  <div className="flex flex-wrap items-center justify-between sm:justify-end gap-3 sm:gap-4 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-line/40">
+                  <div className="flex flex-wrap items-center justify-between lg:justify-end gap-3 lg:gap-4 shrink-0 pt-2 lg:pt-0 border-t lg:border-t-0 border-line/40">
                     {/* Cantidad */}
                     <div className="flex items-center gap-1.5">
                       <span className="text-[11px] text-muted">Cant:</span>
@@ -288,7 +292,7 @@ export function BasketReview({
                     </div>
 
                     {/* Acciones */}
-                    <div className="flex items-center gap-1.5 pl-1 sm:border-l sm:border-line/50">
+                    <div className="flex items-center gap-1.5 pl-1 lg:border-l lg:border-line/50">
                       <button
                         type="button"
                         onClick={() => setEditingItemIdx(editingItemIdx === idx ? null : idx)}
@@ -389,6 +393,10 @@ export function BasketReview({
       )}
 
       {/* Resumen Final y Publicación */}
+      <p className="text-[11px] text-muted -mb-3">
+        Precio estimado con la hora límite elegida. Al publicar, la IA lo ajusta según las piezas sobrantes y la demanda
+        reciente, siempre dentro del piso de cada producto.
+      </p>
       <div className="p-4 rounded-xl bg-subtle border border-line flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="grid grid-cols-3 gap-4 text-xs">
           <div>
@@ -432,6 +440,12 @@ export function BasketReview({
           </button>
         </div>
       </div>
+
+      {publishError && (
+        <p className="text-sm font-medium text-danger bg-danger-soft p-3 rounded-xl" role="alert">
+          {publishError}
+        </p>
+      )}
 
       {/* Modal / Popover para agregar producto del catálogo */}
       {showAddModal && (

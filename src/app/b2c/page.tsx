@@ -50,7 +50,7 @@ export default function B2CPage() {
   const [onlyUnder100, setOnlyUnder100] = useState(false);
   const [onlyFavs, setOnlyFavs] = useState(false);
   const [selected, setSelected] = useState<PkgWithRest | null>(null);
-  const [confirmed, setConfirmed] = useState<{ codigo: string; pkg: PkgWithRest } | null>(null);
+  const [confirmed, setConfirmed] = useState<{ codigo: string; precio: number; pkg: PkgWithRest } | null>(null);
   const [showOrders, setShowOrders] = useState(false);
   const [notificationDismissed, setNotificationDismissed] = useState(false);
   const [orderError, setOrderError] = useState('');
@@ -136,7 +136,7 @@ export default function B2CPage() {
     setOrderError('');
     try {
       const o = await createOrder(selected.id);
-      setConfirmed({ codigo: o.codigo_recoleccion, pkg: selected });
+      setConfirmed({ codigo: o.codigo_recoleccion, precio: o.precio_pagado, pkg: selected });
       setSelected(null);
     } catch (err) {
       setOrderError(err instanceof Error ? err.message : 'No se pudo completar la reserva.');
@@ -162,7 +162,7 @@ export default function B2CPage() {
             ¡Hola, {currentUser.nombre.split(' ')[0]}!
           </h1>
           <p className="text-sm text-muted mt-1">
-            Hoy hay <strong className="text-fg">{filtered.length} paquetes disponibles</strong> esperando ser rescatados en tu zona.
+            Hoy hay <strong className="text-fg">{filtered.length} {filtered.length === 1 ? 'paquete disponible' : 'paquetes disponibles'}</strong> esperando ser rescatados en tu zona.
           </p>
         </div>
 
@@ -450,7 +450,7 @@ export default function B2CPage() {
                   <div className="mt-4 flex flex-wrap items-center gap-1.5 text-[11px]">
                     {isLowStock ? (
                       <span className="badge badge-hot">
-                        Últimas {p.cantidad_disponible} disponibles
+                        {p.cantidad_disponible === 1 ? 'Último disponible' : `Últimos ${p.cantidad_disponible} disponibles`}
                       </span>
                     ) : (
                       <span className="badge badge-subtle">
@@ -615,6 +615,9 @@ export default function B2CPage() {
             <p className="text-xs uppercase font-extrabold tracking-wider text-accent">¡Paquete Rescatado con Éxito!</p>
             <h3 className="text-lg font-black mt-1">{confirmed.pkg.restaurant.nombre}</h3>
             <p className="text-xs text-muted mt-0.5">{confirmed.pkg.titulo}</p>
+            <p className="text-sm font-bold mt-2">
+              Total a pagar en el local: <span className="text-accent">${confirmed.precio} MXN</span>
+            </p>
 
             {/* Simulated QR Code Visual */}
             <div className="my-4 p-4 rounded-2xl bg-subtle border border-dashed border-accent/40 text-center">
@@ -734,6 +737,7 @@ export default function B2CPage() {
                             };
                         setConfirmed({
                           codigo: o.codigo_recoleccion,
+                          precio: o.precio_pagado,
                           pkg: pkgData,
                         });
                       }}
