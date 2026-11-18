@@ -42,6 +42,9 @@ Buen Bocado es un marketplace bilateral (B2B y B2C) de rescate de excedentes de 
 * **Control humano:** el negocio revisa y edita cantidades, producto y precio (siempre dentro del precio piso). El servidor revalida los precios.
 * **Pago:** en efectivo en el local, al recoger. No hay pasarela de pago.
 * **Métricas:** `/admin/piloto` (solo correos en `ADMIN_EMAILS`) muestra datos calculados desde la base y solo de cuentas reales de Supabase Auth. Sin datos, muestra vacío.
+* **Precio dinámico:** cada negocio tiene hora de cierre y cada producto un descuento mínimo y máximo. El descuento crece de forma lineal en las 2 horas previas al cierre (`src/lib/pricing.ts`). Al publicar, Gemini asigna una "urgencia" por producto (piezas sobrantes y reservas recientes) que adelanta o retrasa la curva, y cada reserva sostiene un poco el precio. El servidor recalcula el precio al publicar y al reservar y nunca sale del rango del negocio; la IA no propone precios.
+* **Comparación con el catálogo:** `/api/vision` manda a Gemini una lámina con las fotos de referencia del catálogo y la foto del día. Estados: `match`, `partial` y `no_match` (nada del catálogo en la foto). Coincidencias con confianza menor a 0.5 pasan a "fuera de catálogo". Si un modelo agota su cuota, se usa el siguiente de `GEMINI_FALLBACK_MODELS`.
+* **Piloto simulado:** 2 negocios y 5 compradores con cuentas reales de Supabase Auth (dominio `@piloto-buenbocado.com`), catálogo recortado de fotos reales. Las fotos sintéticas de prueba se reportan por separado de las reales.
 * **Evaluación de la IA:** `scripts/eval-vision.mjs` manda fotos reales etiquetadas a mano por el mismo endpoint y genera `results.csv`.
 * Las hipótesis de cohorte (H1 hábito en 10 negocios, H2 A/B de conversión y retención a 14 días) **no se miden en este MVP**; se estudian por separado.
 

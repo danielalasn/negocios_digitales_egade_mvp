@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
+import { closingInstantToday, floorPriceCents, unitPriceCentsAt } from '@/lib/pricing';
 
 export interface BasketItemState {
   productId: string;
@@ -10,6 +11,7 @@ export interface BasketItemState {
   regularPriceCents: number;
   unitPriceCents: number;
   floorPriceCents: number;
+  minDiscountPct: number;
   maxDiscountPct: number;
   subtotalCents: number;
   confidence?: number;
@@ -22,6 +24,7 @@ export interface CatalogItem {
   name: string;
   photoUrl: string;
   regularPriceCents: number;
+  minDiscountPct: number;
   maxDiscountPct: number;
   visualDescriptor?: string | null;
 }
@@ -33,6 +36,7 @@ interface BasketReviewProps {
   sourcePhoto: string;
   userMessage?: string;
   overallConfidence?: number;
+  closingTime?: string;
   onConfirmPublish: (payload: {
     items: BasketItemState[];
     horaLimite: string;
@@ -49,19 +53,30 @@ export function BasketReview({
   sourcePhoto,
   userMessage,
   overallConfidence = 0.9,
+  closingTime = '20:00',
   onConfirmPublish,
   onCancel,
 }: BasketReviewProps) {
   const [items, setItems] = useState<BasketItemState[]>(initialItems);
   const [unmatched, setUnmatched] = useState(initialUnmatched);
   const [editingItemIdx, setEditingItemIdx] = useState<number | null>(null);
-  const [horaLimite, setHoraLimite] = useState('21:30');
+  const [horaLimite, setHoraLimite] = useState(closingTime);
   const [isPublishing, setIsPublishing] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
 
-  // Totales
-  const totalRegular = items.reduce((acc, i) => acc + (i.regularPriceCents * i.quantity) / 100, 0);
-  const totalRemate = items.reduce((acc, i) => acc + (i.unitPriceCents * i.quantity) / 100, 0);
+  // Dynamic price preview: recomputed from the chosen closing time. The server recomputes on publish.
+  const closesAt = useMemo(() => closingInstantToday(horaLimite), [horaLimite]);
+  const priced = useMemo(
+    () =>
+      items.map((i) => {
+        const unitPriceCents = unitPriceCentsAt(i.regularPriceCents, i.minDiscountPct, i.maxDiscountPct, closesAt);
+        return { ...i, unitPriceCents, subtotalCents: unitPriceCents * i.quantity };
+      }),
+    [items, closesAt]
+  );
+
+  const totalRegular = priced.reduce((acc, i) => acc + (i.regularPriceCents * i.quantity) / 100, 0);
+  const totalRemate = priced.reduce((acc, i) => acc + (i.unitPriceCents * i.quantity) / 100, 0);
   const totalPieces = items.reduce((acc, i) => acc + i.quantity, 0);
   const avgDiscount = totalRegular > 0 ? Math.round(((totalRegular - totalRemate) / totalRegular) * 100) : 0;
 
@@ -87,78 +102,31 @@ export function BasketReview({
     setItems((prev) => prev.filter((_, i) => i !== idx));
   };
 
-  // Actualizar precio de remate dentro del piso garantizado
-  const handleUpdatePrice = (idx: number, newPriceMXN: number) => {
-    setItems((prev) =>
-      prev.map((item, i) => {
-        if (i !== idx) return item;
-        const newPriceCents = Math.round(newPriceMXN * 100);
-        // Validar límites
-        const boundedPriceCents = Math.max(
-          item.floorPriceCents,
-          Math.min(item.regularPriceCents - 500, newPriceCents)
-        );
-        return {
-          ...item,
-          unitPriceCents: boundedPriceCents,
-          subtotalCents: boundedPriceCents * item.quantity,
-          edited: true,
-        };
-      })
-    );
-  };
+  const itemFromProduct = (prod: CatalogItem, quantity: number): BasketItemState => ({
+    productId: prod.id,
+    name: prod.name,
+    photoUrl: prod.photoUrl,
+    quantity,
+    regularPriceCents: prod.regularPriceCents,
+    unitPriceCents: prod.regularPriceCents,
+    floorPriceCents: floorPriceCents(prod.regularPriceCents, prod.maxDiscountPct),
+    minDiscountPct: prod.minDiscountPct,
+    maxDiscountPct: prod.maxDiscountPct,
+    subtotalCents: prod.regularPriceCents * quantity,
+    source: 'manual',
+    edited: true,
+  });
 
   // Cambiar producto por otro del catálogo
   const handleChangeProduct = (idx: number, newProductId: string) => {
     const prod = catalog.find((c) => c.id === newProductId);
     if (!prod) return;
-
-    setItems((prev) =>
-      prev.map((item, i) => {
-        if (i !== idx) return item;
-        const floorPriceCents = Math.round(prod.regularPriceCents * (1 - prod.maxDiscountPct / 100));
-        let rematePriceCents = floorPriceCents;
-        const remainder = rematePriceCents % 500;
-        if (remainder !== 0) rematePriceCents += 500 - remainder;
-
-        return {
-          ...item,
-          productId: prod.id,
-          name: prod.name,
-          photoUrl: prod.photoUrl,
-          regularPriceCents: prod.regularPriceCents,
-          unitPriceCents: rematePriceCents,
-          floorPriceCents: floorPriceCents,
-          maxDiscountPct: prod.maxDiscountPct,
-          subtotalCents: rematePriceCents * item.quantity,
-          edited: true,
-        };
-      })
-    );
+    setItems((prev) => prev.map((item, i) => (i === idx ? itemFromProduct(prod, item.quantity) : item)));
   };
 
   // Agregar producto manualmente desde el catálogo
   const handleAddFromCatalog = (product: CatalogItem, quantity = 1) => {
-    const floorPriceCents = Math.round(product.regularPriceCents * (1 - product.maxDiscountPct / 100));
-    let rematePriceCents = floorPriceCents;
-    const remainder = rematePriceCents % 500;
-    if (remainder !== 0) rematePriceCents += 500 - remainder;
-
-    const newItem: BasketItemState = {
-      productId: product.id,
-      name: product.name,
-      photoUrl: product.photoUrl,
-      quantity,
-      regularPriceCents: product.regularPriceCents,
-      unitPriceCents: rematePriceCents,
-      floorPriceCents: floorPriceCents,
-      maxDiscountPct: product.maxDiscountPct,
-      subtotalCents: rematePriceCents * quantity,
-      source: 'manual',
-      edited: true,
-    };
-
-    setItems((prev) => [...prev, newItem]);
+    setItems((prev) => [...prev, itemFromProduct(product, quantity)]);
     setShowAddModal(false);
   };
 
@@ -244,7 +212,7 @@ export function BasketReview({
           </div>
         ) : (
           <div className="space-y-2.5">
-            {items.map((item, idx) => (
+            {priced.map((item, idx) => (
               <div
                 key={`${item.productId}-${idx}`}
                 className="p-3.5 sm:p-4 rounded-xl bg-subtle border border-line flex flex-col gap-3 text-xs"
@@ -307,7 +275,7 @@ export function BasketReview({
                         <span className="text-[10px] text-muted">c/u</span>
                       </div>
                       <span className="text-[10px] text-muted block">
-                        Piso: ${(item.floorPriceCents / 100).toFixed(2)}
+                        Piso: ${(item.floorPriceCents / 100).toFixed(2)} ({item.minDiscountPct}% a {item.maxDiscountPct}%)
                       </span>
                     </div>
 
@@ -360,19 +328,10 @@ export function BasketReview({
                       </select>
                     </div>
 
-                    <div>
-                      <label className="text-[11px] font-bold text-muted block mb-1">
-                        Ajustar precio de remate (Mínimo: ${(item.floorPriceCents / 100).toFixed(2)}):
-                      </label>
-                      <input
-                        type="number"
-                        min={item.floorPriceCents / 100}
-                        max={(item.regularPriceCents - 500) / 100}
-                        step="5"
-                        value={item.unitPriceCents / 100}
-                        onChange={(e) => handleUpdatePrice(idx, parseFloat(e.target.value) || 0)}
-                        className="w-full text-xs p-1.5 rounded border border-line bg-surface text-fg font-mono"
-                      />
+                    <div className="text-[11px] text-muted leading-relaxed">
+                      El precio lo calcula el sistema: parte de {item.minDiscountPct}% de descuento y sube hasta{' '}
+                      {item.maxDiscountPct}% (piso ${(item.floorPriceCents / 100).toFixed(2)}) conforme se acerca la hora
+                      límite. No se puede publicar por debajo del piso.
                     </div>
                   </div>
                 )}
@@ -454,7 +413,7 @@ export function BasketReview({
 
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1.5 text-xs text-muted">
-            <span>Hora límite:</span>
+            <span>Hora límite (cierre):</span>
             <input
               type="time"
               value={horaLimite}

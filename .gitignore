@@ -46,3 +46,8 @@ next-env.d.ts
 .claude/
 .windsurf/
 /scripts/
+
+# local pilot photos (real shop photos and synthetic test images, not published)
+/restaurantes/
+/eval/**/*.jpg
+/eval/**/results*.csv

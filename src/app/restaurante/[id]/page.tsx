@@ -3,10 +3,11 @@
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { livePrice } from '@/lib/livePrice';
+import { useNow } from '@/components/useNow';
 import { useStore } from '@/store/useStore';
 import { useHydrated } from '@/components/useHydrated';
 
-const disc = (o: number, r: number) => Math.round(((o - r) / o) * 100);
 
 export default function RestaurantProfilePage() {
   const { id } = useParams<{ id: string }>();
@@ -17,6 +18,7 @@ export default function RestaurantProfilePage() {
   const packages = useStore((s) => s.packages);
   const toggleFavorite = useStore((s) => s.toggleFavorite);
   const createOrder = useStore((s) => s.createOrder);
+  const now = useNow();
   const [code, setCode] = useState<{ codigo: string; titulo: string } | null>(null);
 
   if (!hydrated) return null;
@@ -105,6 +107,7 @@ export default function RestaurantProfilePage() {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {items.map((p) => {
               const out = !p.disponible || p.cantidad_disponible <= 0;
+              const lp = livePrice(p, now);
               return (
                 <article key={p.id} className={`card card-interactive p-5 flex flex-col justify-between overflow-hidden ${out ? 'opacity-60' : ''}`}>
                   <div>
@@ -143,10 +146,10 @@ export default function RestaurantProfilePage() {
                   <div className="mt-5 pt-4 border-t border-line flex items-center justify-between">
                     <div>
                       <div className="flex items-baseline gap-1.5">
-                        <span className="text-xl font-black">${p.precio_remate}</span>
-                        <span className="text-xs text-muted line-through">${p.precio_original}</span>
+                        <span className="text-xl font-black">${lp.price}</span>
+                        <span className="text-xs text-muted line-through">${lp.original}</span>
                       </div>
-                      <span className="badge badge-eco text-[10px] font-bold">-{disc(p.precio_original, p.precio_remate)}%</span>
+                      <span className="badge badge-eco text-[10px] font-bold">-{lp.pct}%</span>
                     </div>
 
                     {isClient ? (

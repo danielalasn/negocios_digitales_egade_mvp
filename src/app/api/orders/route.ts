@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { pool, requireUser, errorResponse, HttpError } from '@/lib/serverAuth';
+import { packageTotals, type PricedItem } from '@/lib/pricing';
 
 const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 
@@ -34,7 +35,7 @@ export async function POST(req: Request) {
       }
 
       const { rows: pkgs } = await client.query(
-        `SELECT id, restaurant_id, precio_remate, cantidad_disponible, disponible
+        `SELECT id, restaurant_id, precio_remate, cantidad, cantidad_disponible, disponible, closes_at, items_detectados
            FROM packages WHERE id = $1 FOR UPDATE;`,
         [packageId]
       );
@@ -44,6 +45,25 @@ export async function POST(req: Request) {
         throw new HttpError(409, 'SOLD_OUT', 'Este paquete ya se agotó.');
       }
 
+      // Price is dynamic: recomputed on the server at reservation time. Legacy packages without
+      // closing data keep their stored price.
+      let price = Number(pkg.precio_remate);
+      if (pkg.closes_at && Array.isArray(pkg.items_detectados)) {
+        const priced: PricedItem[] = pkg.items_detectados
+          .filter((i: any) => typeof i.regular_cents === 'number')
+          .map((i: any) => ({
+            quantity: i.cantidad,
+            regularPriceCents: i.regular_cents,
+            minDiscountPct: i.min_pct,
+            maxDiscountPct: i.max_pct,
+            urgency: typeof i.urgency === 'number' ? i.urgency : 0,
+          }));
+        if (priced.length > 0) {
+          const soldFraction = pkg.cantidad > 0 ? (pkg.cantidad - pkg.cantidad_disponible) / pkg.cantidad : 0;
+          price = packageTotals(priced, new Date(pkg.closes_at), new Date(), soldFraction).currentCents / 100;
+        }
+      }
+
       const remaining = pkg.cantidad_disponible - 1;
       const orderId = `order-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
       const code = generateCode();
@@ -51,7 +71,7 @@ export async function POST(req: Request) {
       await client.query(
         `INSERT INTO orders (id, package_id, user_id, restaurant_id, codigo_recoleccion, estado, precio_pagado)
          VALUES ($1, $2, $3, $4, $5, 'pendiente', $6);`,
-        [orderId, pkg.id, user.id, pkg.restaurant_id, code, pkg.precio_remate]
+        [orderId, pkg.id, user.id, pkg.restaurant_id, code, price]
       );
       await client.query(
         `UPDATE packages SET cantidad_disponible = $2, disponible = $3 WHERE id = $1;`,
@@ -62,7 +82,7 @@ export async function POST(req: Request) {
         [
           `ev-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
           pkg.restaurant_id,
-          JSON.stringify({ orderId, packageId: pkg.id, userId: user.id, pricePaid: Number(pkg.precio_remate) }),
+          JSON.stringify({ orderId, packageId: pkg.id, userId: user.id, pricePaid: price }),
         ]
       );
 
@@ -77,7 +97,7 @@ export async function POST(req: Request) {
           restaurant_id: pkg.restaurant_id,
           codigo_recoleccion: code,
           estado: 'pendiente',
-          precio_pagado: Number(pkg.precio_remate),
+          precio_pagado: price,
           createdAt: new Date().toISOString(),
         },
         remaining,

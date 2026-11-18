@@ -7,6 +7,7 @@ import { compressImage } from '@/lib/image';
 
 interface VisionBasketData {
   overall_confidence: number;
+  closing_time?: string;
   user_message?: string;
   unmatched: { description: string; quantity: number }[];
   items: BasketItemState[];
@@ -71,7 +72,7 @@ export function VisionUploader({ onPublished, onCancel }: VisionUploaderProps) {
         setError({
           message: json.user_message || json.message || 'No pudimos analizar la foto. Intenta de nuevo.',
           reason: json.rejection_reason,
-          rejected: json.is_food === false,
+          rejected: json.is_food === false || json.error_code === 'NO_CATALOG_MATCH',
         });
       }
     } catch (err) {
@@ -161,7 +162,7 @@ export function VisionUploader({ onPublished, onCancel }: VisionUploaderProps) {
             <div className="p-5 rounded-2xl bg-amber-500/10 border-2 border-amber-500/30 space-y-3 fade-in">
               <div>
                 <span className="text-[10px] font-black uppercase tracking-wider text-amber-600 dark:text-amber-400">
-                  {error.rejected ? 'Foto no válida' : 'No se pudo analizar'}
+                  {error.rejected ? 'Sin coincidencias' : 'No se pudo analizar'}
                 </span>
                 <p className="text-sm text-fg mt-1 leading-relaxed">{error.message}</p>
               </div>
@@ -206,6 +207,7 @@ export function VisionUploader({ onPublished, onCancel }: VisionUploaderProps) {
               sourcePhoto={selectedImage}
               userMessage={basket.user_message}
               overallConfidence={basket.overall_confidence}
+              closingTime={basket.closing_time}
               onConfirmPublish={async (payload) => {
                 const res = await fetch('/api/basket/confirm', {
                   method: 'POST',

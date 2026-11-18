@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { livePrice } from '@/lib/livePrice';
+import { useNow } from '@/components/useNow';
 import { useStore } from '@/store/useStore';
 import { useHydrated } from '@/components/useHydrated';
 import { VisionUploader } from '@/components/VisionUploader';
@@ -15,6 +17,7 @@ const disc = (o: number, r: number) => Math.round(((o - r) / o) * 100);
 export default function B2BPage() {
   const router = useRouter();
   const hydrated = useHydrated();
+  const now = useNow();
   const currentUser = useStore((s) => s.currentUser);
   const restaurants = useStore((s) => s.restaurants);
   const packages = useStore((s) => s.packages);
@@ -290,6 +293,7 @@ export default function B2BPage() {
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {myPkgs.map((p) => {
                 const sold = p.cantidad - p.cantidad_disponible;
+                const lp = livePrice(p, now);
                 return (
                   <article key={p.id} className="card fade-in p-5 overflow-hidden flex flex-col justify-between">
                     <div>
@@ -320,9 +324,9 @@ export default function B2BPage() {
                       )}
 
                       <div className="mt-4 flex items-baseline gap-2">
-                        <span className="text-xl font-black text-fg">${p.precio_remate}</span>
-                        <span className="text-sm text-muted line-through">${p.precio_original}</span>
-                        <span className="text-xs text-accent font-bold">-{disc(p.precio_original, p.precio_remate)}%</span>
+                        <span className="text-xl font-black text-fg">${lp.price}</span>
+                        <span className="text-sm text-muted line-through">${lp.original}</span>
+                        <span className="text-xs text-accent font-bold">-{lp.pct}%</span>
                       </div>
                     </div>
 

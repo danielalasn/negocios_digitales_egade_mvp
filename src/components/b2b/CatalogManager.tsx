@@ -9,12 +9,13 @@ interface Product {
   name: string;
   photo_url: string;
   regular_price_cents: number;
+  min_discount_pct: number;
   max_discount_pct: number;
   visual_descriptor: string | null;
   active: boolean;
 }
 
-const emptyForm = { name: '', price: '', discount: '60', descriptor: '' };
+const emptyForm = { name: '', price: '', minDiscount: '20', discount: '60', descriptor: '' };
 
 export function CatalogManager({ merchantId }: { merchantId: string }) {
   const [products, setProducts] = useState<Product[]>([]);
@@ -55,10 +56,14 @@ export function CatalogManager({ merchantId }: { merchantId: string }) {
     e.preventDefault();
     const price = parseFloat(form.price);
     const discount = parseInt(form.discount, 10);
+    const minDiscount = parseInt(form.minDiscount, 10);
     if (!form.name.trim()) return setError('Escribe el nombre del producto.');
     if (!price || price < 10) return setError('El precio regular debe ser de al menos $10 MXN.');
     if (isNaN(discount) || discount < 0 || discount > 90) {
       return setError('El descuento máximo debe estar entre 0 y 90%.');
+    }
+    if (isNaN(minDiscount) || minDiscount < 0 || minDiscount > discount) {
+      return setError('El descuento mínimo debe estar entre 0 y el descuento máximo.');
     }
     if (!photo) return setError('Agrega una foto de referencia del producto.');
 
@@ -70,6 +75,7 @@ export function CatalogManager({ merchantId }: { merchantId: string }) {
       name: form.name.trim(),
       photo_url: photo,
       regular_price_cents: Math.round(price * 100),
+      min_discount_pct: minDiscount,
       max_discount_pct: discount,
       visual_descriptor: form.descriptor.trim() || null,
       active: true,
@@ -109,6 +115,10 @@ export function CatalogManager({ merchantId }: { merchantId: string }) {
           <div>
             <label className="label">Precio regular (MXN)</label>
             <input id="prod-price" type="number" min="10" step="1" className="input" placeholder="26" value={form.price} onChange={set('price')} />
+          </div>
+          <div>
+            <label className="label">Descuento mínimo (%), al inicio de la tarde</label>
+            <input id="prod-min-discount" type="number" min="0" max="90" className="input" value={form.minDiscount} onChange={set('minDiscount')} />
           </div>
           <div>
             <label className="label">Descuento máximo (%), define tu precio piso</label>
@@ -179,7 +189,7 @@ export function CatalogManager({ merchantId }: { merchantId: string }) {
                 <p className="font-semibold truncate">{p.name}</p>
                 <p className="text-xs text-muted">
                   ${(p.regular_price_cents / 100).toFixed(2)} MXN, piso $
-                  {((p.regular_price_cents * (1 - p.max_discount_pct / 100)) / 100).toFixed(2)} ({p.max_discount_pct}% máx.)
+                  {((p.regular_price_cents * (1 - p.max_discount_pct / 100)) / 100).toFixed(2)} (descuento {p.min_discount_pct}% a {p.max_discount_pct}%)
                 </p>
                 {p.visual_descriptor && <p className="text-xs text-muted truncate">{p.visual_descriptor}</p>}
               </div>

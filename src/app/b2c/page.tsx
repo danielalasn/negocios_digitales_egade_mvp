@@ -3,12 +3,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { livePrice } from '@/lib/livePrice';
+import { useNow } from '@/components/useNow';
 import { useStore, Package, Restaurant } from '@/store/useStore';
 import { useHydrated } from '@/components/useHydrated';
 
 type PkgWithRest = Package & { restaurant: Restaurant };
 
-const disc = (o: number, r: number) => Math.round(((o - r) / o) * 100);
 
 const CAT_EMOJIS: Record<string, string> = {
   'Italiana': '🍕',
@@ -41,6 +42,7 @@ export default function B2CPage() {
   const orders = useStore((s) => s.orders);
   const toggleFavorite = useStore((s) => s.toggleFavorite);
   const createOrder = useStore((s) => s.createOrder);
+  const now = useNow();
 
   const [cat, setCat] = useState('Todas');
   const [zona, setZona] = useState('Todas las zonas');
@@ -73,7 +75,7 @@ export default function B2CPage() {
         const zClean = zona.toLowerCase().replace(' / valle', '');
         if (!p.restaurant.direccion.toLowerCase().includes(zClean)) return false;
       }
-      if (onlyUnder100 && p.precio_remate > 100) return false;
+      if (onlyUnder100 && livePrice(p, now).price > 100) return false;
       if (onlyFavs && !favs.includes(p.restaurant.id)) return false;
       if (search.trim()) {
         const q = search.toLowerCase();
@@ -86,7 +88,7 @@ export default function B2CPage() {
       }
       return true;
     });
-  }, [available, cat, zona, onlyUnder100, onlyFavs, search, favs]);
+  }, [available, cat, zona, onlyUnder100, onlyFavs, search, favs, now]);
 
   const myOrders = useMemo(
     () =>
@@ -360,7 +362,8 @@ export default function B2CPage() {
         <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((p) => {
             const isFav = favs.includes(p.restaurant.id);
-            const discountPct = disc(p.precio_original, p.precio_remate);
+            const lp = livePrice(p, now);
+            const discountPct = lp.pct;
             const isLowStock = p.cantidad_disponible <= 3;
 
             return (
@@ -465,8 +468,8 @@ export default function B2CPage() {
                 <div className="mt-5 pt-4 border-t border-line flex items-center justify-between">
                   <div>
                     <div className="flex items-baseline gap-1.5">
-                      <span className="text-2xl font-black text-fg">${p.precio_remate}</span>
-                      <span className="text-xs text-muted line-through">${p.precio_original}</span>
+                      <span className="text-2xl font-black text-fg">${lp.price}</span>
+                      <span className="text-xs text-muted line-through">${lp.original}</span>
                     </div>
                     <span className="badge badge-eco text-[10px] font-bold">
                       Ahorras {discountPct}%
@@ -561,13 +564,13 @@ export default function B2CPage() {
           </p>
 
           <div className="my-3 p-4 rounded-xl bg-subtle border border-line space-y-2 text-xs">
-            <Row k="Precio regular estimado" v={<span className="line-through text-muted font-mono">${selected.precio_original} MXN</span>} />
-            <Row k="Descuento de remate" v={<span className="text-accent font-bold">-{disc(selected.precio_original, selected.precio_remate)}% OFF</span>} />
+            <Row k="Precio regular estimado" v={<span className="line-through text-muted font-mono">${livePrice(selected, now).original} MXN</span>} />
+            <Row k="Descuento de remate" v={<span className="text-accent font-bold">-{livePrice(selected, now).pct}% OFF (sube hacia el cierre)</span>} />
             <Row k="Horario de recolección" v={<span className="font-semibold text-fg">Hoy antes de {selected.hora_limite}</span>} />
             <Row k="Punto de entrega" v={<span className="text-fg">{selected.restaurant.direccion}</span>} />
             <div className="border-t border-line pt-2.5 flex justify-between items-baseline font-bold text-sm">
               <span className="text-fg">Total a pagar en el local:</span>
-              <span className="text-xl font-black text-accent">${selected.precio_remate} MXN</span>
+              <span className="text-xl font-black text-accent">${livePrice(selected, now).price} MXN</span>
             </div>
           </div>
 

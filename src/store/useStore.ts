@@ -44,7 +44,17 @@ export interface Package {
   hora_limite: string; // HH:MM format
   disponible: boolean;
   foto_vitrina?: string;
-  items_detectados?: { nombre: string; cantidad: number; precio_estimado?: number }[];
+  closes_at?: string; // ISO instant used for dynamic pricing
+  items_detectados?: {
+    nombre: string;
+    cantidad: number;
+    precio_estimado?: number;
+    regular_cents?: number;
+    min_pct?: number;
+    max_pct?: number;
+    urgency?: number;
+    ai_reason?: string;
+  }[];
   aprobado_sin_edicion?: boolean;
   createdAt: string;
 }
@@ -162,6 +172,7 @@ const mapPackageFromDB = (p: any): Package => ({
   precio_original: parseFloat(p.precio_original),
   precio_remate: parseFloat(p.precio_remate),
   hora_limite: p.hora_limite,
+  closes_at: p.closes_at || undefined,
   disponible: p.disponible,
   foto_vitrina: p.foto_vitrina || undefined,
   items_detectados: p.items_detectados || undefined,

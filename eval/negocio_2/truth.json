@@ -1,0 +1,10 @@
+{
+  "real_vitrina_crinkles.jpg": { "isFood": true, "difficulty": "hard", "items": { "Crinkle de limón": null, "Crinkle de chocolate": null, "Semita de bustamante": null, "Cookie rellena de caramelo": null }, "note": "real photo; mapping of labels to trays confirmed by the user before running" },
+  "real_sandwiches_fuera_catalogo.jpg": { "isFood": true, "difficulty": "easy", "items": {}, "note": "real photo of sandwiches and sodas, outside the catalog" },
+  "n2_cierre_01.jpg": { "isFood": true, "difficulty": "easy", "items": { "Crinkle de limón": 6, "Crinkle de chocolate": 4 }, "note": "synthetic; counts from the prompt, verify by eye" },
+  "n2_cierre_03.jpg": { "isFood": true, "difficulty": "medium", "items": { "Semita de bustamante": 2 }, "note": "synthetic; scones are not in the catalog" },
+  "neg_01_pizza.jpg": { "isFood": true, "difficulty": "easy", "items": {}, "note": "synthetic; expect no match" },
+  "neg_02_tacos.jpg": { "isFood": true, "difficulty": "easy", "items": {}, "note": "synthetic; expect no match" },
+  "neg_05_empty_case.jpg": { "isFood": false, "difficulty": "easy", "items": {}, "note": "synthetic; empty display case" },
+  "trampa_n1_cierre_03.jpg": { "isFood": true, "difficulty": "hard", "items": {}, "note": "synthetic; danes and conchas belong to business 1, expect no match here" }
+}

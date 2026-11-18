@@ -1,5 +1,9 @@
 import { NextResponse } from 'next/server';
-import { analyzePhotoWithGemini, calculateRematePrice, CatalogProduct } from '@/lib/gemini';
+import { analyzePhotoWithGemini, isQuotaError, CatalogProduct } from '@/lib/gemini';
+import { closingInstantToday, floorPriceCents, unitPriceCentsAt } from '@/lib/pricing';
+
+// Matches below this confidence are treated as not recognized.
+const MIN_MATCH_CONFIDENCE = 0.5;
 import { pool, requireMerchant, errorResponse } from '@/lib/serverAuth';
 
 // Real Gemini analysis only. There is no simulated or fallback result: if the model is
@@ -20,6 +24,9 @@ export async function POST(req: Request) {
 
     // Identity comes from the verified Supabase session, never from the body.
     const { merchantId, restaurantName } = await requireMerchant(req);
+    const { rows: closingRows } = await pool.query('SELECT closing_time FROM restaurants WHERE id = $1;', [merchantId]);
+    const closingTime: string = closingRows[0]?.closing_time || '20:00';
+    const closesAt = closingInstantToday(closingTime);
 
     const body = await req.json();
     const { imageUrl } = body;
@@ -32,7 +39,7 @@ export async function POST(req: Request) {
 
     const { rows: catalog } = await pool.query<CatalogProduct>(
       `SELECT id, name, photo_url AS "photoUrl", regular_price_cents AS "regularPriceCents",
-              max_discount_pct AS "maxDiscountPct", visual_descriptor AS "visualDescriptor"
+              min_discount_pct AS "minDiscountPct", max_discount_pct AS "maxDiscountPct", visual_descriptor AS "visualDescriptor"
          FROM products
         WHERE merchant_id = $1 AND active = true
         ORDER BY created_at ASC;`,
@@ -59,6 +66,16 @@ export async function POST(req: Request) {
       await logEvent(merchantId, 'vision_error', {
         message: geminiError instanceof Error ? geminiError.message : String(geminiError),
       });
+      if (isQuotaError(geminiError)) {
+        return NextResponse.json(
+          {
+            success: false,
+            error_code: 'GEMINI_QUOTA',
+            user_message: 'Se alcanzó el límite de uso de la IA por ahora. Intenta de nuevo en unos minutos.',
+          },
+          { status: 429 }
+        );
+      }
       return NextResponse.json(
         {
           success: false,
@@ -95,18 +112,29 @@ export async function POST(req: Request) {
     }
 
     // Basket is built on the server using ONLY catalog prices. IDs outside the catalog are dropped.
+    // Low-confidence matches are moved to "unmatched" instead of being proposed.
     const catalogMap = new Map(catalog.map((c) => [c.id, c]));
     const proposedItems = [];
+    const unmatched = [...(visionResult.unmatched || [])];
+    const now = new Date();
 
     for (const match of visionResult.matches) {
       const prod = catalogMap.get(match.productId);
       if (!prod) continue;
-
-      const { rematePriceCents, floorPriceCents } = calculateRematePrice(
-        prod.regularPriceCents,
-        prod.maxDiscountPct
-      );
       const quantity = Math.max(1, match.quantity);
+
+      if (match.confidence < MIN_MATCH_CONFIDENCE) {
+        unmatched.push({ description: `${prod.name} (baja confianza)`, quantity });
+        continue;
+      }
+
+      const unitPriceCents = unitPriceCentsAt(
+        prod.regularPriceCents,
+        prod.minDiscountPct,
+        prod.maxDiscountPct,
+        closesAt,
+        now
+      );
 
       proposedItems.push({
         productId: prod.id,
@@ -114,14 +142,33 @@ export async function POST(req: Request) {
         photoUrl: prod.photoUrl,
         quantity,
         regularPriceCents: prod.regularPriceCents,
-        unitPriceCents: rematePriceCents,
-        floorPriceCents,
+        unitPriceCents,
+        floorPriceCents: floorPriceCents(prod.regularPriceCents, prod.maxDiscountPct),
+        minDiscountPct: prod.minDiscountPct,
         maxDiscountPct: prod.maxDiscountPct,
-        subtotalCents: rematePriceCents * quantity,
+        subtotalCents: unitPriceCents * quantity,
         confidence: match.confidence,
         source: 'ai',
         edited: false,
       });
+    }
+
+    const status = proposedItems.length === 0 ? 'no_match' : unmatched.length > 0 ? 'partial' : 'match';
+
+    if (status === 'no_match') {
+      await logEvent(merchantId, 'vision_no_match', { unmatched: unmatched.length });
+      return NextResponse.json(
+        {
+          success: false,
+          is_food: true,
+          status,
+          error_code: 'NO_CATALOG_MATCH',
+          unmatched,
+          user_message:
+            'No encontramos ningún producto de tu catálogo en esta foto. Revisa que sea tu vitrina o agrega estos productos a tu catálogo.',
+        },
+        { status: 422 }
+      );
     }
 
     const totalRegularCents = proposedItems.reduce((a, i) => a + i.regularPriceCents * i.quantity, 0);
@@ -134,9 +181,13 @@ export async function POST(req: Request) {
       data: {
         merchant_id: merchantId,
         restaurant_name: restaurantName,
+        model: meta.model,
         overall_confidence: visionResult.overallConfidence,
         user_message: visionResult.userMessage,
-        unmatched: visionResult.unmatched || [],
+        status,
+        closing_time: closingTime,
+        closes_at: closesAt.toISOString(),
+        unmatched,
         items: proposedItems,
         total_regular_cents: totalRegularCents,
         total_remate_cents: totalRemateCents,

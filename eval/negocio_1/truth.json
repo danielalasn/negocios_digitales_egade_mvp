@@ -1,0 +1,14 @@
+{
+  "real_danes_dona.jpg": { "isFood": true, "difficulty": "medium", "items": { "Danés de chocolate": null, "Danés de guayaba": null, "Dona de azúcar": null }, "note": "real photo; cinnamon rolls with white icing are not in the catalog" },
+  "real_conchas_roles.jpg": { "isFood": true, "difficulty": "hard", "items": { "Concha de vainilla": null, "Rol de canela y chocolate": null, "Danés de chocolate": null }, "optional": ["Danés de guayaba"], "note": "real photo; brown conchas are not in the catalog; guava danes only partially visible" },
+  "real_chocolatin.jpg": { "isFood": true, "difficulty": "medium", "items": { "Chocolatín": null }, "note": "real photo; empanada is not in the catalog" },
+  "real_pan_jamon.jpg": { "isFood": true, "difficulty": "hard", "items": { "Pan de jamón y queso": null }, "optional": ["Chocolatín", "Concha de vainilla", "Danés de chocolate", "Danés de guayaba", "Rol de canela y chocolate"], "note": "real photo; other products partly visible on lower shelf" },
+  "n1_cierre_01.jpg": { "isFood": true, "difficulty": "easy", "items": { "Danés de chocolate": 3, "Dona de azúcar": 2 }, "note": "synthetic; counts from the prompt, verify by eye" },
+  "n1_cierre_03.jpg": { "isFood": true, "difficulty": "easy", "items": { "Danés de guayaba": 5 }, "optional": ["Concha de vainilla"], "note": "synthetic; chocolate conchas are not in the catalog" },
+  "n1_cierre_04.jpg": { "isFood": true, "difficulty": "hard", "items": { "Danés de chocolate": 2, "Danés de guayaba": 2, "Rol de canela y chocolate": 1, "Dona de azúcar": 3 }, "note": "synthetic mix, overlapping; chocolate donut is not in the catalog" },
+  "neg_01_pizza.jpg": { "isFood": true, "difficulty": "easy", "items": {}, "note": "synthetic; food outside the catalog, expect no match" },
+  "neg_02_tacos.jpg": { "isFood": true, "difficulty": "easy", "items": {}, "note": "synthetic; food outside the catalog, expect no match" },
+  "neg_05_empty_case.jpg": { "isFood": false, "difficulty": "easy", "items": {}, "note": "synthetic; empty display case" },
+  "neg_menu_documento.jpg": { "isFood": false, "difficulty": "easy", "items": {}, "note": "real photo of a printed menu, not food" },
+  "trampa_n2_cierre_01.jpg": { "isFood": true, "difficulty": "hard", "items": {}, "note": "synthetic; crinkle cookies belong to business 2, expect no match here" }
+}
