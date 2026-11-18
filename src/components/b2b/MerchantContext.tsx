@@ -94,9 +94,13 @@ export function MerchantProvider({ rest, children }: { rest: Restaurant; childre
     (raw: string): RedeemResult => {
       const clean = raw.trim().toUpperCase();
       const code = parsePickupCode(raw) ?? (clean.startsWith('#') ? clean : `#${clean}`);
-      const target = orders.find((o) => o.codigo_recoleccion === code && o.estado === 'pendiente');
+      const own = orders.find((o) => o.codigo_recoleccion === code);
+      if (own && own.estado === 'completada') {
+        return { ok: false, code, message: `El pedido ${code} ya fue entregado` };
+      }
+      const target = own && own.estado === 'pendiente' ? own : undefined;
       if (!target) {
-        return { ok: false, code, message: 'Código no encontrado o ya entregado' };
+        return { ok: false, code, message: 'Código no encontrado. Revisa que sea de tu negocio.' };
       }
       updateOrderStatus(target.id, 'completada');
       return { ok: true, code, message: `¡Pedido ${code} validado y entregado!` };

@@ -142,6 +142,11 @@ export function QrScanner({ onCode, onClose }: QrScannerProps) {
         </div>
         <canvas ref={canvasRef} className="hidden" />
 
+        <p className="text-xs text-muted">
+          Apunta la cámara al QR del cliente. Si la cámara no abre o no tienes permiso, sube una foto del QR o escribe el
+          código.
+        </p>
+
         {error && (
           <p className="text-xs font-medium text-danger bg-danger-soft p-2.5 rounded-lg" role="alert">
             {error}

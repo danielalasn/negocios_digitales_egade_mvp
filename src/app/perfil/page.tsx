@@ -26,6 +26,7 @@ export default function ConsumerProfilePage() {
     restaurante: string;
     direccion: string;
     hora_limite: string;
+    entregado: boolean;
   } | null>(null);
 
   useEffect(() => {
@@ -83,7 +84,7 @@ export default function ConsumerProfilePage() {
     .filter(Boolean);
 
   return (
-    <div className="mx-auto max-w-4xl px-4 pt-6 pb-24">
+    <div className="mx-auto max-w-4xl px-4 pt-6 pb-24 overflow-x-hidden">
       {/* Back button */}
       <div className="mb-6">
         <Link
@@ -311,12 +312,13 @@ export default function ConsumerProfilePage() {
                             restaurante: o.rest?.nombre || 'Comercio local',
                             direccion: o.rest?.direccion || 'Mostrador del comercio',
                             hora_limite: o.pkg?.hora_limite || '22:00',
+                            entregado: o.estado === 'completada',
                           })}
                           className="btn btn-secondary !py-1.5 !px-3 text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-2xs hover:border-accent/40"
-                          title="Ver código QR para recoger"
+                          title={o.estado === 'completada' ? 'Ver comprobante del pedido' : 'Ver código QR para recoger'}
                         >
                           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M7 7h.01M17 7h.01M7 17h.01M17 17h.01"/></svg>
-                          <span>Ver QR</span>
+                          <span>{o.estado === 'completada' ? 'Ver comprobante' : 'Ver QR'}</span>
                         </button>
                         <div className="text-right">
                           <span className="text-lg font-black text-fg">${o.precio_pagado}</span>
@@ -339,22 +341,32 @@ export default function ConsumerProfilePage() {
             <div className="w-12 h-12 rounded-full bg-accent-soft text-accent flex items-center justify-center mx-auto mb-2">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
             </div>
-            <p className="text-xs uppercase font-extrabold tracking-wider text-accent">Código de Recolección</p>
+            <p className="text-xs uppercase font-extrabold tracking-wider text-accent">
+              {selectedTicket.entregado ? 'Pedido entregado' : 'Código de Recolección'}
+            </p>
             <h3 className="text-lg font-black mt-1">{selectedTicket.restaurante}</h3>
             <p className="text-xs text-muted mt-0.5">{selectedTicket.titulo}</p>
 
-            <div className="my-4 p-4 rounded-2xl bg-subtle border border-dashed border-accent/40 text-center">
-              <QrCode code={selectedTicket.codigo} />
-              <p className="text-[11px] font-bold text-muted uppercase tracking-wider mt-2 mb-0.5">
-                Código para canje en mostrador
-              </p>
-              <p className="text-3xl font-black font-mono tracking-widest text-accent py-1 select-all">
-                {selectedTicket.codigo}
-              </p>
-              <p className="text-[11px] text-muted">
-                Horario límite de recolección: <strong>{selectedTicket.hora_limite}</strong>
-              </p>
-            </div>
+            {selectedTicket.entregado ? (
+              <div className="my-4 p-4 rounded-2xl bg-subtle border border-line text-center">
+                <p className="text-sm font-semibold text-fg">Este pedido ya fue entregado</p>
+                <p className="text-2xl font-black font-mono tracking-widest text-muted py-1">{selectedTicket.codigo}</p>
+                <p className="text-[11px] text-muted">El código ya no se puede volver a canjear.</p>
+              </div>
+            ) : (
+              <div className="my-4 p-4 rounded-2xl bg-subtle border border-dashed border-accent/40 text-center">
+                <QrCode code={selectedTicket.codigo} />
+                <p className="text-[11px] font-bold text-muted uppercase tracking-wider mt-2 mb-0.5">
+                  Código para canje en mostrador
+                </p>
+                <p className="text-3xl font-black font-mono tracking-widest text-accent py-1 select-all">
+                  {selectedTicket.codigo}
+                </p>
+                <p className="text-[11px] text-muted">
+                  Horario límite de recolección: <strong>{selectedTicket.hora_limite}</strong>
+                </p>
+              </div>
+            )}
 
             <div className="text-xs text-muted bg-surface p-3 rounded-xl border border-line text-left space-y-1 mb-5">
               <p className="font-semibold text-fg">Dirección de entrega:</p>
